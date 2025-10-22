@@ -7,8 +7,7 @@ const app = express();
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
 
 console.log('🤖 Bot initialized with token:', process.env.TELEGRAM_BOT_TOKEN ? 'YES' : 'NO');
-
-app.use(express.json());
+console.log('🔑 Frappe CRM API:', process.env.FRAPPE_CRM_BASE_URL ? 'Configured' : 'Missing');
 
 // Set Telegram webhook
 const webhookUrl = `${process.env.WEBHOOK_URL}/webhook`;
@@ -26,6 +25,7 @@ app.post('/webhook', (req, res) => {
   res.sendStatus(200);
 });
 
+// Optional root route
 app.get('/', (req, res) => {
   console.log('🌐 Root route accessed');
   res.send('Telegram Bot is running! Webhook: /webhook');
@@ -54,16 +54,13 @@ bot.on('voice', async (msg) => {
   console.log('🎤 Voice message received from:', msg.from.username || msg.from.first_name);
   const chatId = msg.chat.id;
   const fileId = msg.voice.file_id;
-  
   try {
     console.log('📥 Getting file info for:', fileId);
     const file = await bot.getFile(fileId);
     const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
-    
     console.log('🔗 Voice file URL:', fileUrl);
     await bot.sendMessage(chatId, `Received voice message. File URL: ${fileUrl}`);
     console.log('✅ Voice message processed for:', chatId);
-    
     // TODO: Send fileUrl to n8n for Whisper transcription
   } catch (error) {
     console.error('❌ Voice processing error:', error);
@@ -73,16 +70,14 @@ bot.on('voice', async (msg) => {
 
 // Handle button callbacks
 bot.on('callback_query', (query) => {
-  console.log('🔘 Button clicked:', query.data, 'by:', query.from.username);
+  console.log('🔘 Button clicked:', query.data, 'by:', query.from.username || query.from.first_name);
   const chatId = query.message.chat.id;
   const action = query.data;
-  
   bot.sendMessage(chatId, `Selected: ${action}`).then(() => {
     console.log('✅ Button response sent for:', action);
   }).catch(err => {
     console.error('❌ Button response failed:', err);
   });
-  
   bot.answerCallbackQuery(query.id).then(() => {
     console.log('✅ Callback query answered');
   }).catch(err => {
@@ -90,7 +85,7 @@ bot.on('callback_query', (query) => {
   });
 });
 
-// Error handler
+// Error handlers
 bot.on('error', (error) => {
   console.error('🤖 Bot error:', error);
 });
