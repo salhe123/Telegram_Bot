@@ -9,6 +9,10 @@ const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
 console.log('🤖 Bot initialized with token:', process.env.TELEGRAM_BOT_TOKEN ? 'YES' : 'NO');
 console.log('🔑 Frappe CRM API:', process.env.FRAPPE_CRM_BASE_URL ? 'Configured' : 'Missing');
 
+// Middleware to parse JSON and URL-encoded bodies
+app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
+app.use(express.urlencoded({ extended: true, verify: (req, res, buf) => { req.rawBody = buf; } }));
+
 // Set Telegram webhook
 const webhookUrl = `${process.env.WEBHOOK_URL}/webhook`;
 console.log('🔗 Setting webhook to:', webhookUrl);
@@ -20,7 +24,14 @@ bot.setWebHook(webhookUrl).then(() => {
 
 // Webhook route for Telegram
 app.post('/webhook', (req, res) => {
-  console.log('📨 Incoming webhook:', JSON.stringify(req.body, null, 2));
+  console.log('📨 Raw body:', req.rawBody ? req.rawBody.toString() : 'No raw body');
+  console.log('📨 Parsed body:', JSON.stringify(req.body, null, 2));
+  
+  if (!req.body || !req.body.update_id) {
+    console.log('⚠️ Invalid webhook data');
+    return res.sendStatus(200);
+  }
+  
   bot.processUpdate(req.body);
   res.sendStatus(200);
 });
