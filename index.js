@@ -14,7 +14,7 @@ app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: true, verify: (req, res, buf) => { req.rawBody = buf; } }));
 
 // Set Telegram webhook
-const webhookUrl = `${process.env.WEBHOOK_URL}/webhook`;
+const webhookUrl = `${process.env.WEBHOOK_URL}`;
 console.log('🔗 Setting webhook to:', webhookUrl);
 bot.setWebHook(webhookUrl).then(() => {
   console.log('✅ Webhook set successfully');
