@@ -1,12 +1,12 @@
 require('dotenv').config();
-import express, { json } from 'express';
-import TelegramBot from 'node-telegram-bot-api';
-import axios from 'axios';
+const express = require('express');
+const TelegramBot = require('node-telegram-bot-api');
+const axios = require('axios');
 
 const app = express();
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
 
-app.use(json());
+app.use(express.json());
 
 // Set Telegram webhook
 bot.setWebHook(`${process.env.WEBHOOK_URL}/webhook`);
