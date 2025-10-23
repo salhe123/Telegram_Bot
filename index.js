@@ -23,7 +23,7 @@ bot.setWebHook(webhookUrl).then(() => {
 });
 
 // Webhook route for Telegram
-app.post('/webhook', (req, res) => {
+app.post('/webhook-test/telegram-lead-webhook', (req, res) => {
   console.log('📨 Raw body:', req.rawBody ? req.rawBody.toString() : 'No raw body');
   console.log('📨 Parsed body:', JSON.stringify(req.body, null, 2));
   
@@ -39,7 +39,7 @@ app.post('/webhook', (req, res) => {
 // Optional root route
 app.get('/', (req, res) => {
   console.log('🌐 Root route accessed');
-  res.send('Telegram Bot is running! Webhook: /webhook');
+  res.send('Telegram Bot is running! Webhook: /webhook-test/telegram-lead-webhook');
 });
 
 // Handle /start command
@@ -68,8 +68,7 @@ bot.on('voice', async (msg) => {
     const file = await bot.getFile(fileId);
     const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
     await bot.sendMessage(chatId, `Processing voice...`);
-    // Send to n8n
-    await axios.post('http://localhost:5678/webhook-test/telegram-lead-webhook', { fileUrl, chatId });
+    await axios.post('https://salheseid.app.n8n.cloud/webhook-test/telegram-lead-webhook', { fileUrl, chatId });
     console.log('✅ Sent to n8n:', fileUrl);
   } catch (error) {
     console.error('❌ Voice error:', error);
