@@ -62,20 +62,18 @@ bot.onText(/\/start/, (msg) => {
 
 // Handle voice messages
 bot.on('voice', async (msg) => {
-  console.log('🎤 Voice message received from:', msg.from.username || msg.from.first_name);
   const chatId = msg.chat.id;
   const fileId = msg.voice.file_id;
   try {
-    console.log('📥 Getting file info for:', fileId);
     const file = await bot.getFile(fileId);
     const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
-    console.log('🔗 Voice file URL:', fileUrl);
-    await bot.sendMessage(chatId, `Received voice message. File URL: ${fileUrl}`);
-    console.log('✅ Voice message processed for:', chatId);
-    // TODO: Send fileUrl to n8n for Whisper transcription
+    await bot.sendMessage(chatId, `Processing voice...`);
+    // Send to n8n
+    await axios.post('http://localhost:5678/webhook-test/telegram-lead-webhook', { fileUrl, chatId });
+    console.log('✅ Sent to n8n:', fileUrl);
   } catch (error) {
-    console.error('❌ Voice processing error:', error);
-    await bot.sendMessage(chatId, 'Error processing voice message.');
+    console.error('❌ Voice error:', error);
+    await bot.sendMessage(chatId, 'Error processing voice.');
   }
 });
 
@@ -106,7 +104,7 @@ bot.on('polling_error', (error) => {
 });
 
 // Start server
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
   console.log(`📡 Webhook URL: ${webhookUrl}`);
