@@ -87,6 +87,7 @@ bot.on('voice', async (msg) => {
     await bot.sendMessage(chatId, 'Processing your voice message...');
 
     const file = await bot.getFile(fileId);
+    if (!file || !file.file_path) throw new Error('Failed to get file path');
     const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
