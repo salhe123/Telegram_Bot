@@ -6,45 +6,38 @@ const axios = require('axios');
 const app = express();
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
 
-console.log('🤖 Bot initialized with token:', process.env.TELEGRAM_BOT_TOKEN ? 'YES' : 'NO');
-console.log('🔑 Frappe CRM API:', process.env.FRAPPE_CRM_BASE_URL ? 'Configured' : 'Missing');
+// === LOG STARTUP ===
+console.log('Bot initialized with token:', process.env.TELEGRAM_BOT_TOKEN ? 'YES' : 'NO');
+console.log('Frappe CRM API:', process.env.FRAPPE_CRM_BASE_URL ? 'Configured' : 'Missing');
 
-// Middleware to parse JSON and URL-encoded bodies
+// === MIDDLEWARE ===
 app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: true, verify: (req, res, buf) => { req.rawBody = buf; } }));
 
-// Set Telegram webhook
-const webhookUrl = `${process.env.WEBHOOK_URL}`;
-console.log('🔗 Setting webhook to:', webhookUrl);
-bot.setWebHook(webhookUrl).then(() => {
-  console.log('✅ Webhook set successfully');
-}).catch(err => {
-  console.error('❌ Webhook set failed:', err);
-});
+// === SET WEBHOOK ===
+const webhookUrl = process.env.WEBHOOK_URL;
+console.log('Setting webhook to:', webhookUrl);
+bot.setWebHook(webhookUrl)
+  .then(() => console.log('Webhook set successfully'))
+  .catch(err => console.error('Webhook set failed:', err));
 
-// Webhook route for Telegram
+// === WEBHOOK ROUTE (Telegram → Bot) ===
 app.post('/webhook-test/telegram-lead-webhook', (req, res) => {
-  console.log('📨 Raw body:', req.rawBody ? req.rawBody.toString() : 'No raw body');
-  console.log('📨 Parsed body:', JSON.stringify(req.body, null, 2));
-  
   if (!req.body || !req.body.update_id) {
-    console.log('⚠️ Invalid webhook data');
+    console.log('Invalid webhook data');
     return res.sendStatus(200);
   }
-  
   bot.processUpdate(req.body);
   res.sendStatus(200);
 });
 
-// Optional root route
+// === ROOT ROUTE ===
 app.get('/', (req, res) => {
-  console.log('🌐 Root route accessed');
   res.send('Telegram Bot is running! Webhook: /webhook-test/telegram-lead-webhook');
 });
 
-// Handle /start command
+// === /start COMMAND ===
 bot.onText(/\/start/, (msg) => {
-  console.log('🚀 /start command from:', msg.from.username || msg.from.first_name);
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, 'Welcome to Frappe Lead Bot! Choose an action:', {
     reply_markup: {
@@ -53,58 +46,68 @@ bot.onText(/\/start/, (msg) => {
         [{ text: 'Update Lead', callback_data: 'update_lead' }]
       ]
     }
-  }).then(() => {
-    console.log('✅ /start message sent to:', chatId);
-  }).catch(err => {
-    console.error('❌ Failed to send /start:', err);
   });
 });
 
-// Handle voice messages
+// === BUTTON CALLBACKS ===
+bot.on('callback_query', async (query) => {
+  const chatId = query.message.chat.id;
+  const action = query.data;
+
+  if (action === 'create_lead') {
+    await bot.sendMessage(chatId, 'Please send a *voice message* with the lead details (name, email, phone, etc.) and specify CRM URL (e.g., /setcrm https://client-crm.fr8labs.co)', { parse_mode: 'Markdown' });
+  } else if (action === 'update_lead') {
+    await bot.sendMessage(chatId, 'Update Lead feature coming soon...');
+  } else {
+    await bot.sendMessage(chatId, `You selected: ${action}`);
+  }
+
+  bot.answerCallbackQuery(query.id);
+});
+
+// === CRM URL SET COMMAND ===
+bot.onText(/\/setcrm (.+)/, (msg, match) => {
+  const chatId = msg.chat.id;
+  const crmUrl = match[1];
+  bot.sendMessage(chatId, `CRM URL set to: ${crmUrl}`);
+  bot.session = bot.session || {};
+  bot.session[chatId] = { crmBaseUrl: crmUrl };
+});
+
+// === VOICE MESSAGE HANDLER ===
 bot.on('voice', async (msg) => {
   const chatId = msg.chat.id;
   const fileId = msg.voice.file_id;
+
   try {
+    await bot.sendMessage(chatId, 'Processing your voice message...');
+
     const file = await bot.getFile(fileId);
     const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
-    await bot.sendMessage(chatId, `Processing voice...`);
-    await axios.post('https://salheseid.app.n8n.cloud/webhook-test/telegram-lead-webhook', { fileUrl, chatId });
-    console.log('✅ Sent to n8n:', fileUrl);
+    const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
+
+    // SEND TO N8N WORKFLOW (MUST MATCH n8n Webhook Node Path!)
+    await axios.post('https://salheseid.app.n8n.cloud/webhook/VOICE_LEAD_TRIGGER', {
+      fileUrl,
+      chatId,
+      crmBaseUrl
+    });
+
+    console.log('Sent to n8n:', fileUrl, 'CRM:', crmBaseUrl);
+    await bot.sendMessage(chatId, 'Voice sent! n8n is processing...');
   } catch (error) {
-    console.error('❌ Voice error:', error);
-    await bot.sendMessage(chatId, 'Error processing voice.');
+    console.error('Voice error:', error.message);
+    await bot.sendMessage(chatId, 'Error processing voice. Try again.');
   }
 });
 
-// Handle button callbacks
-bot.on('callback_query', (query) => {
-  console.log('🔘 Button clicked:', query.data, 'by:', query.from.username || query.from.first_name);
-  const chatId = query.message.chat.id;
-  const action = query.data;
-  bot.sendMessage(chatId, `Selected: ${action}`).then(() => {
-    console.log('✅ Button response sent for:', action);
-  }).catch(err => {
-    console.error('❌ Button response failed:', err);
-  });
-  bot.answerCallbackQuery(query.id).then(() => {
-    console.log('✅ Callback query answered');
-  }).catch(err => {
-    console.error('❌ Callback answer failed:', err);
-  });
-});
+// === ERROR HANDLING ===
+bot.on('error', (error) => console.error('Bot error:', error));
+bot.on('polling_error', (error) => console.error('Polling error:', error));
 
-// Error handlers
-bot.on('error', (error) => {
-  console.error('🤖 Bot error:', error);
-});
-
-bot.on('polling_error', (error) => {
-  console.error('🤖 Polling error:', error);
-});
-
-// Start server
-const port = process.env.PORT || 4000;
+// === START SERVER ===
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
-  console.log(`🚀 Server running on port ${port}`);
-  console.log(`📡 Webhook URL: ${webhookUrl}`);
+  console.log(`Server running on port ${port}`);
+  console.log(`Webhook URL: ${webhookUrl}`);
 });
