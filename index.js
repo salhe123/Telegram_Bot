@@ -90,7 +90,7 @@ bot.on('voice', async (msg) => {
     const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
-    await axios.post('https://salheseid.app.n8n.cloud/webhook/VOICE_LEAD_TRIGGER', {
+    await axios.post('https://salheseid.app.n8n.cloud/webhook-test/VOICE_LEAD_TRIGGER', {
       fileUrl,
       chatId,
       crmBaseUrl
