@@ -88,16 +88,16 @@ bot.on('voice', async (msg) => {
 
     const file = await bot.getFile(fileId);
     if (!file || !file.file_path) throw new Error('Failed to get file path');
-    const filePath = file.file_path; // Send raw file_path
+    const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
-    await axios.post('https://salheseid.app.n8n.cloud/webhook/VOICE_LEAD_TRIGGER', {
-      filePath, 
+    await axios.post('https://salheseid.app.n8n.cloud/webhook-test/VOICE_LEAD_TRIGGER', {
+      fileUrl,
       chatId,
       crmBaseUrl
     });
 
-    console.log(`Sent to n8n: filePath: ${filePath}, CRM: ${crmBaseUrl}`);
+    console.log(`Sent to n8n: ${fileUrl}, CRM: ${crmBaseUrl}`);
     await bot.sendMessage(chatId, 'Voice sent! n8n is processing...');
   } catch (error) {
     console.error(`Voice error for ${chatId}:`, error.message);
