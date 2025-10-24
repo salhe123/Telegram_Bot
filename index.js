@@ -91,8 +91,8 @@ bot.on('voice', async (msg) => {
     const filePath = file.file_path; // Send raw file_path
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
-    await axios.post('https://salheseid.app.n8n.cloud/webhook-test/VOICE_LEAD_TRIGGER', {
-      filePath, // Send file_path instead of constructed fileUrl
+    await axios.post(`${process.env.N8N_BASE_URL}`, {
+      filePath, 
       chatId,
       crmBaseUrl
     });
