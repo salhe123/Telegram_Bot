@@ -95,7 +95,7 @@ bot.on('callback_query', async (query) => {
   try {
     await axios.post(n8nConfirmUrl, {
       chatId,
-      draftId,
+      text,
       crmBaseUrl: bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL
     });
     await bot.sendMessage(chatId, 'Confirmation sent. Creating lead now...');
