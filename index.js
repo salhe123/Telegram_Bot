@@ -85,25 +85,25 @@ bot.on('callback_query', async (query) => {
       await bot.sendMessage(chatId, 'Error: CRM URL not set. Use /setcrm <URL> first.');
       return;
     }
-    await bot.sendMessage(chatId, 'Confirming lead...');
-    try {
-      const leadData = { 
-        doctype: 'CRM Lead',
-        first_name: 'John', 
-        email: 'john@email.com', 
-        status: 'Qualified'
-      };
-      await axios.post(`${crmBaseUrl}/api/method/frappe.client.insert`, leadData, {
-        headers: { 'Authorization': `token ${process.env.FRAPPE_API_KEY}:${process.env.FRAPPE_API_SECRET}` }
-      });
-      await bot.sendMessage(chatId, 'Lead created successfully in CRM!');
-    } catch (error) {
-      console.error(`CRM creation error for ${chatId}:`, error.message);
-      await bot.sendMessage(chatId, 'Error creating lead in CRM. Try again.');
-    }
-  } else {
-    await bot.sendMessage(chatId, `You selected: ${action}`);
+    // snippet to replace your confirm branch in callback_query handler
+} else if (action && action.startsWith('confirm_draft:')) {
+  const chatId = query.message.chat.id;
+  const draftId = action.split(':')[1];
+  const n8nConfirmUrl = process.env.N8N_CONFIRM_WEBHOOK || 'https://seyaa.app.n8n.cloud/webhook/CONFIRM_LEAD';
+
+  await bot.sendMessage(chatId, 'Confirming lead — sending confirmation to workflow...');
+  try {
+    await axios.post(n8nConfirmUrl, {
+      chatId,
+      draftId,
+      crmBaseUrl: bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL
+    });
+    await bot.sendMessage(chatId, 'Confirmation sent. Creating lead now...');
+  } catch (err) {
+    console.error('Error sending confirm to n8n', err.message);
+    await bot.sendMessage(chatId, 'Could not confirm lead right now. Try again later.');
   }
+}
 
   bot.answerCallbackQuery(query.id);
 });
