@@ -50,6 +50,25 @@ bot.onText(/\/start/, (msg) => {
   });
 });
 
+// === /help COMMAND ===
+bot.onText(/\/help/, (msg) => {
+  const chatId = msg.chat.id;
+  console.log(`Received /help from chatId: ${chatId}`);
+  bot.sendMessage(chatId, `
+*Frappe Lead Bot Help*
+- This bot helps you create and manage leads in your Frappe CRM.
+- *Key Features*:
+  - Create leads via voice messages (e.g., "My name is John, email john@email.com").
+  - Set CRM URL with /setcrm <URL> (e.g., /setcrm https://client-crm.fr8labs.co).
+  - Confirm lead data after review.
+- *Important Notes*:
+  - Mandatory field: *first_name* must be provided.
+  - Use /setcrm before sending voice messages to link your CRM.
+  - Reply 'confirm' or send edits after reviewing the draft.
+- For support, contact the admin or check the n8n workflow logs.
+  `, { parse_mode: 'Markdown' });
+});
+
 // === BUTTON CALLBACKS ===
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
@@ -60,6 +79,28 @@ bot.on('callback_query', async (query) => {
     await bot.sendMessage(chatId, 'Please send a *voice message* with lead details and specify CRM URL (e.g., /setcrm https://client-crm.fr8labs.co)', { parse_mode: 'Markdown' });
   } else if (action === 'update_lead') {
     await bot.sendMessage(chatId, 'Update Lead feature coming soon...');
+  } else if (action === 'confirm_lead') {
+    const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
+    if (!crmBaseUrl) {
+      await bot.sendMessage(chatId, 'Error: CRM URL not set. Use /setcrm <URL> first.');
+      return;
+    }
+    await bot.sendMessage(chatId, 'Confirming lead...');
+    try {
+      const leadData = { 
+        doctype: 'CRM Lead',
+        first_name: 'John', 
+        email: 'john@email.com', 
+        status: 'Qualified'
+      };
+      await axios.post(`${crmBaseUrl}/api/method/frappe.client.insert`, leadData, {
+        headers: { 'Authorization': `token ${process.env.FRAPPE_API_KEY}:${process.env.FRAPPE_API_SECRET}` }
+      });
+      await bot.sendMessage(chatId, 'Lead created successfully in CRM!');
+    } catch (error) {
+      console.error(`CRM creation error for ${chatId}:`, error.message);
+      await bot.sendMessage(chatId, 'Error creating lead in CRM. Try again.');
+    }
   } else {
     await bot.sendMessage(chatId, `You selected: ${action}`);
   }
