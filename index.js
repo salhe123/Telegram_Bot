@@ -21,155 +21,135 @@ bot.setWebHook(webhookUrl)
   .then(() => console.log('Webhook set successfully'))
   .catch(err => console.error('Webhook set failed:', err));
 
-// === WEBHOOK ROUTE (Telegram → Bot) ===
+// === WEBHOOK ROUTE ===
 app.post('/webhook', (req, res) => {
-  if (!req.body || !req.body.update_id) {
-    console.log('Invalid webhook data');
-    return res.sendStatus(200);
-  }
+  if (!req.body || !req.body.update_id) return res.sendStatus(200);
   bot.processUpdate(req.body);
   res.sendStatus(200);
 });
 
 // === ROOT ROUTE ===
-app.get('/', (req, res) => {
-  res.send('Telegram Bot is running! Webhook: /webhook');
-});
+app.get('/', (req, res) => res.send('Bot running'));
 
-// === /start COMMAND ===
+// === /start ===
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  console.log(`Received /start from chatId: ${chatId}`);
-  bot.sendMessage(chatId, 'Welcome to Frappe Lead Bot! Choose an action:', {
+  bot.sendMessage(chatId, 'Welcome to Frappe Lead Bot!', {
     reply_markup: {
       inline_keyboard: [
-        [{ text: 'Create Lead', callback_data: 'create_lead' }],
+        [{ text: 'Create Lead', callback_data: 'creat_lead' }],
         [{ text: 'Update Lead', callback_data: 'update_lead' }]
       ]
     }
   });
 });
 
-// === /help COMMAND ===
+// === /help ===
 bot.onText(/\/help/, (msg) => {
   const chatId = msg.chat.id;
-  console.log(`Received /help from chatId: ${chatId}`);
   bot.sendMessage(chatId, `
 *Frappe Lead Bot Help*
-- This bot helps you create and manage leads in your Frappe CRM.
-- *Key Features*:
-  - Create leads via voice messages (e.g., "My name is John, email john@email.com").
-  - Set CRM URL with /setcrm <URL> (e.g., /setcrm https://client-crm.fr8labs.co).
-  - Confirm lead data after review.
-- *Important Notes*:
-  - Mandatory field: *first_name* must be provided.
-  - Use /setcrm before sending voice messages to link your CRM.
-  - Reply 'confirm' or send edits after reviewing the draft.
-- For support, contact the admin or check the n8n workflow logs.
+- Send *voice message* to create lead
+- Use */setcrm <URL>* to set CRM
+- Reply *confirm* to save lead
+- Mandatory: *first_name*
   `, { parse_mode: 'Markdown' });
 });
 
-// === BUTTON CALLBACKS ===
+// === CALLBACKS ===
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const action = query.data;
-  console.log(`Callback from ${chatId}: ${action}`);
 
-  if (action === 'create_lead') {
-    await bot.sendMessage(chatId, 'Please send a *voice message* with lead details and specify CRM URL (e.g., /setcrm https://client-crm.fr8labs.co)', { parse_mode: 'Markdown' });
+  if (action === 'creat_lead') {
+    await bot.sendMessage(chatId, 'Send a *voice message* with lead details.\nSet CRM with */setcrm <URL>* first.', { parse_mode: 'Markdown' });
   } else if (action === 'update_lead') {
-    await bot.sendMessage(chatId, 'Update Lead feature coming soon...');
+    await bot.sendMessage(chatId, 'Coming soon...');
   }
 
   bot.answerCallbackQuery(query.id);
 });
 
-// === CRM URL SET COMMAND ===
+// === /setcrm ===
 bot.onText(/\/setcrm (.+)/, (msg, match) => {
   const chatId = msg.chat.id;
-  const crmUrl = match[1];
-  console.log(`Set CRM URL for ${chatId} to: ${crmUrl}`);
+  const crmUrl = match[1].trim();
   bot.session = bot.session || {};
   bot.session[chatId] = bot.session[chatId] || {};
   bot.session[chatId].crmBaseUrl = crmUrl;
-  bot.sendMessage(chatId, `CRM URL set to: ${crmUrl}`);
+  bot.sendMessage(chatId, `CRM set to: \`${crmUrl}\``, { parse_mode: 'Markdown' });
 });
 
-// === VOICE MESSAGE HANDLER ===
+// === VOICE HANDLER ===
 bot.on('voice', async (msg) => {
   const chatId = msg.chat.id;
   const fileId = msg.voice.file_id;
-  console.log(`Voice message from ${chatId}, fileId: ${fileId}`);
 
   try {
-    await bot.sendMessage(chatId, 'Processing your voice message...');
+    await bot.sendMessage(chatId, 'Processing voice...');
 
     const file = await bot.getFile(fileId);
-    if (!file || !file.file_path) throw new Error('Failed to get file path');
+    if (!file?.file_path) throw new Error('No file path');
+
     const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
     if (!crmBaseUrl) {
-      await bot.sendMessage(chatId, 'Please set CRM URL first with /setcrm <URL>');
+      await bot.sendMessage(chatId, 'Set CRM first: */setcrm <URL>*', { parse_mode: 'Markdown' });
       return;
     }
 
-    // === SEND TO n8n ===
     await axios.post('https://seyaa.app.n8n.cloud/webhook-test/VOICE_LEAD_TRIGGER', {
       fileUrl,
       chatId,
       crmBaseUrl
     });
 
-    // === SAVE draftId IN SESSION ===
-    const tempDraftId = `${chatId}-${Date.now()}`;
-    bot.session[chatId].draftId = tempDraftId;
-    console.log(`Draft ID saved: ${tempDraftId}`);
-
-    await bot.sendMessage(chatId, 'Voice sent! n8n is processing...');
-  } catch (error) {
-    console.error(`Voice error for ${chatId}:`, error.message);
-    await bot.sendMessage(chatId, 'Error processing voice. Try again.');
+    await bot.sendMessage(chatId, 'Voice sent! n8n is analyzing...');
+  } catch (err) {
+    console.error('Voice error:', err.message);
+    await bot.sendMessage(chatId, 'Error. Try again.');
   }
 });
 
-// === CONFIRM TEXT HANDLER ===
+// === CONFIRM REPLY HANDLER ===
 bot.on('message', async (msg) => {
+  if (!msg.reply_to_message) return;
+  if (!msg.text) return;
+
+  const replyText = msg.reply_to_message.text || '';
+  const draftIdMatch = replyText.match(/draftId: `([^`]+)`/);
+  if (!draftIdMatch) return;
+
+  const draftId = draftIdMatch[1];
   const chatId = msg.chat.id;
-  const text = msg.text?.trim().toLowerCase();
+  const text = msg.text.trim().toLowerCase();
 
   if (text === 'confirm') {
-    const session = bot.session?.[chatId];
-    if (!session?.draftId) {
-      await bot.sendMessage(chatId, 'No draft found. Send a new voice message.');
-      return;
-    }
-
-    const { draftId, crmBaseUrl } = session;
+    const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
     try {
-      await axios.post('https://seyaa.app.n8n.cloud/webhook/CONFIRM_LEAD', {
+      await bot.sendMessage(chatId, 'Creating lead in CRM...');
+      await axios.post('https://seyaa.app.n8n.cloud/webhook-test/CONFIRM_LEAD', {
         draftId,
         chatId,
         crmBaseUrl
       });
-
-      await bot.sendMessage(chatId, 'Lead confirmed! Creating in CRM...');
-      console.log(`Confirm sent: draftId=${draftId}`);
+      await bot.sendMessage(chatId, 'Lead created successfully!');
     } catch (err) {
       console.error('Confirm error:', err.message);
-      await bot.sendMessage(chatId, 'Error confirming. Try again.');
+      await bot.sendMessage(chatId, 'Error creating lead. Try again.');
     }
   }
 });
 
 // === ERROR HANDLING ===
-bot.on('error', (error) => console.error('Bot error:', error));
-bot.on('polling_error', (error) => console.error('Polling error:', error));
+bot.on('error', (e) => console.error('Bot error:', e));
+bot.on('polling_error', (e) => console.error('Polling error:', e));
 
 // === START SERVER ===
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
-  console.log(`Webhook URL: ${webhookUrl}`);
+  console.log(`Webhook: ${webhookUrl}`);
 });
