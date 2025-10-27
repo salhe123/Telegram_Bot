@@ -121,7 +121,7 @@ bot.on('callback_query', async (query) => {
         leadData: JSON.stringify(leadData)
       });
 
-      await bot.editMessageText('Lead created successfully!', {
+      await bot.editMessageText('Waiting...!', {
         chat_id: chatId,
         message_id: query.message.message_id
       });
