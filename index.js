@@ -79,32 +79,6 @@ bot.on('callback_query', async (query) => {
     await bot.sendMessage(chatId, 'Please send a *voice message* with lead details and specify CRM URL (e.g., /setcrm https://client-crm.fr8labs.co)', { parse_mode: 'Markdown' });
   } else if (action === 'update_lead') {
     await bot.sendMessage(chatId, 'Update Lead feature coming soon...');
-  } else if (action.startsWith('confirm_draft:')) {
-    const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
-    if (!crmBaseUrl) {
-      await bot.sendMessage(chatId, 'Error: CRM URL not set. Use /setcrm <URL> first.');
-      return;
-    }
-    const draftId = action.split(':')[1];
-    await bot.sendMessage(chatId, 'Confirming lead — sending confirmation to workflow...');
-    try {
-      const n8nConfirmUrl = process.env.N8N_CONFIRM_WEBHOOK || 'https://seyaa.app.n8n.cloud/webhook-test/CONFIRM_LEAD';
-      const response = await axios.post(n8nConfirmUrl, {
-        chatId,
-        draftId,
-        crmBaseUrl
-      });
-      await bot.sendMessage(chatId, 'Confirmation sent. Creating lead now...');
-      // Optionally, handle the response from n8n to get lead data
-      const leadData = response.data; // Assuming n8n returns lead data
-      await axios.post(`${crmBaseUrl}/api/method/frappe.client.insert`, leadData, {
-        headers: { 'Authorization': `token ${process.env.FRAPPE_API_KEY}:${process.env.FRAPPE_API_SECRET}` }
-      });
-      await bot.sendMessage(chatId, 'Lead created successfully in CRM!');
-    } catch (err) {
-      console.error('Error sending confirm to n8n', err.message);
-      await bot.sendMessage(chatId, 'Could not confirm lead right now. Try again later.');
-    }
   }
 
   bot.answerCallbackQuery(query.id);
@@ -116,7 +90,8 @@ bot.onText(/\/setcrm (.+)/, (msg, match) => {
   const crmUrl = match[1];
   console.log(`Set CRM URL for ${chatId} to: ${crmUrl}`);
   bot.session = bot.session || {};
-  bot.session[chatId] = { crmBaseUrl: crmUrl };
+  bot.session[chatId] = bot.session[chatId] || {};
+  bot.session[chatId].crmBaseUrl = crmUrl;
   bot.sendMessage(chatId, `CRM URL set to: ${crmUrl}`);
 });
 
@@ -134,17 +109,57 @@ bot.on('voice', async (msg) => {
     const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
-    await axios.post('https://seyaa.app.n8n.cloud/webhook-test/VOICE_LEAD_TRIGGER', {
+    if (!crmBaseUrl) {
+      await bot.sendMessage(chatId, 'Please set CRM URL first with /setcrm <URL>');
+      return;
+    }
+
+    // === SEND TO n8n ===
+    await axios.post('https://seyaa.app.n8n.cloud/webhook/VOICE_LEAD_TRIGGER', {
       fileUrl,
       chatId,
       crmBaseUrl
     });
 
-    console.log(`Sent to n8n: ${fileUrl}, CRM: ${crmBaseUrl}`);
+    // === SAVE draftId IN SESSION ===
+    const tempDraftId = `${chatId}-${Date.now()}`;
+    bot.session[chatId].draftId = tempDraftId;
+    console.log(`Draft ID saved: ${tempDraftId}`);
+
     await bot.sendMessage(chatId, 'Voice sent! n8n is processing...');
   } catch (error) {
     console.error(`Voice error for ${chatId}:`, error.message);
     await bot.sendMessage(chatId, 'Error processing voice. Try again.');
+  }
+});
+
+// === CONFIRM TEXT HANDLER ===
+bot.on('message', async (msg) => {
+  const chatId = msg.chat.id;
+  const text = msg.text?.trim().toLowerCase();
+
+  if (text === 'confirm') {
+    const session = bot.session?.[chatId];
+    if (!session?.draftId) {
+      await bot.sendMessage(chatId, 'No draft found. Send a new voice message.');
+      return;
+    }
+
+    const { draftId, crmBaseUrl } = session;
+
+    try {
+      await axios.post('https://seyaa.app.n8n.cloud/webhook/CONFIRM_LEAD', {
+        draftId,
+        chatId,
+        crmBaseUrl
+      });
+
+      await bot.sendMessage(chatId, 'Lead confirmed! Creating in CRM...');
+      console.log(`Confirm sent: draftId=${draftId}`);
+    } catch (err) {
+      console.error('Confirm error:', err.message);
+      await bot.sendMessage(chatId, 'Error confirming. Try again.');
+    }
   }
 });
 
