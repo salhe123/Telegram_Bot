@@ -79,31 +79,33 @@ bot.on('callback_query', async (query) => {
     await bot.sendMessage(chatId, 'Please send a *voice message* with lead details and specify CRM URL (e.g., /setcrm https://client-crm.fr8labs.co)', { parse_mode: 'Markdown' });
   } else if (action === 'update_lead') {
     await bot.sendMessage(chatId, 'Update Lead feature coming soon...');
-  } else if (action === 'confirm_lead') {
+  } else if (action.startsWith('confirm_draft:')) {
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
     if (!crmBaseUrl) {
       await bot.sendMessage(chatId, 'Error: CRM URL not set. Use /setcrm <URL> first.');
       return;
     }
-    // snippet to replace your confirm branch in callback_query handler
-} else if (action && action.startsWith('confirm_draft:')) {
-  const chatId = query.message.chat.id;
-  const draftId = action.split(':')[1];
-  const n8nConfirmUrl = process.env.N8N_CONFIRM_WEBHOOK || 'https://seyaa.app.n8n.cloud/webhook/CONFIRM_LEAD';
-
-  await bot.sendMessage(chatId, 'Confirming lead — sending confirmation to workflow...');
-  try {
-    await axios.post(n8nConfirmUrl, {
-      chatId,
-      text,
-      crmBaseUrl: bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL
-    });
-    await bot.sendMessage(chatId, 'Confirmation sent. Creating lead now...');
-  } catch (err) {
-    console.error('Error sending confirm to n8n', err.message);
-    await bot.sendMessage(chatId, 'Could not confirm lead right now. Try again later.');
+    const draftId = action.split(':')[1];
+    await bot.sendMessage(chatId, 'Confirming lead — sending confirmation to workflow...');
+    try {
+      const n8nConfirmUrl = process.env.N8N_CONFIRM_WEBHOOK || 'https://seyaa.app.n8n.cloud/webhook-test/CONFIRM_LEAD';
+      const response = await axios.post(n8nConfirmUrl, {
+        chatId,
+        draftId,
+        crmBaseUrl
+      });
+      await bot.sendMessage(chatId, 'Confirmation sent. Creating lead now...');
+      // Optionally, handle the response from n8n to get lead data
+      const leadData = response.data; // Assuming n8n returns lead data
+      await axios.post(`${crmBaseUrl}/api/method/frappe.client.insert`, leadData, {
+        headers: { 'Authorization': `token ${process.env.FRAPPE_API_KEY}:${process.env.FRAPPE_API_SECRET}` }
+      });
+      await bot.sendMessage(chatId, 'Lead created successfully in CRM!');
+    } catch (err) {
+      console.error('Error sending confirm to n8n', err.message);
+      await bot.sendMessage(chatId, 'Could not confirm lead right now. Try again later.');
+    }
   }
-}
 
   bot.answerCallbackQuery(query.id);
 });
