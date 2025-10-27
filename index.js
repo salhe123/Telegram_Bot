@@ -23,17 +23,25 @@ bot.setWebHook(webhookUrl)
 
 // === WEBHOOK ROUTE ===
 app.post('/webhook', (req, res) => {
-  if (!req.body || !req.body.update_id) return res.sendStatus(200);
+  if (!req.body || !req.body.update_id) {
+    console.log('Invalid webhook payload received');
+    return res.sendStatus(200);
+  }
+  console.log('Webhook update received:', req.body.update_id);
   bot.processUpdate(req.body);
   res.sendStatus(200);
 });
 
 // === ROOT ROUTE ===
-app.get('/', (req, res) => res.send('Bot running'));
+app.get('/', (req, res) => {
+  console.log('Health check: /');
+  res.send('Bot running');
+});
 
 // === /start ===
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
+  console.log(`/start from chatId: ${chatId}`);
   bot.sendMessage(chatId, 'Welcome to Frappe Lead Bot!', {
     reply_markup: {
       inline_keyboard: [
@@ -47,6 +55,7 @@ bot.onText(/\/start/, (msg) => {
 // === /help ===
 bot.onText(/\/help/, (msg) => {
   const chatId = msg.chat.id;
+  console.log(`/help from chatId: ${chatId}`);
   bot.sendMessage(chatId, `
 *Frappe Lead Bot Help*
 - Send *voice message* to create lead
@@ -60,10 +69,13 @@ bot.onText(/\/help/, (msg) => {
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const action = query.data;
+  console.log(`Callback from ${chatId}: ${action}`);
 
   if (action === 'creat_lead') {
+    console.log(`User ${chatId} clicked Create Lead`);
     await bot.sendMessage(chatId, 'Send a *voice message* with lead details.\nSet CRM with */setcrm <URL>* first.', { parse_mode: 'Markdown' });
   } else if (action === 'update_lead') {
+    console.log(`User ${chatId} clicked Update Lead (coming soon)`);
     await bot.sendMessage(chatId, 'Coming soon...');
   }
 
@@ -74,6 +86,7 @@ bot.on('callback_query', async (query) => {
 bot.onText(/\/setcrm (.+)/, (msg, match) => {
   const chatId = msg.chat.id;
   const crmUrl = match[1].trim();
+  console.log(`Set CRM URL for ${chatId}: ${crmUrl}`);
   bot.session = bot.session || {};
   bot.session[chatId] = bot.session[chatId] || {};
   bot.session[chatId].crmBaseUrl = crmUrl;
@@ -84,6 +97,7 @@ bot.onText(/\/setcrm (.+)/, (msg, match) => {
 bot.on('voice', async (msg) => {
   const chatId = msg.chat.id;
   const fileId = msg.voice.file_id;
+  console.log(`Voice message from ${chatId}, fileId: ${fileId}`);
 
   try {
     await bot.sendMessage(chatId, 'Processing voice...');
@@ -95,16 +109,19 @@ bot.on('voice', async (msg) => {
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
     if (!crmBaseUrl) {
+      console.log(`CRM URL missing for ${chatId}`);
       await bot.sendMessage(chatId, 'Set CRM first: */setcrm <URL>*', { parse_mode: 'Markdown' });
       return;
     }
 
+    console.log(`Sending voice to n8n: chatId=${chatId}, crmBaseUrl=${crmBaseUrl}`);
     await axios.post('https://seyaa.app.n8n.cloud/webhook-test/VOICE_LEAD_TRIGGER', {
       fileUrl,
       chatId,
       crmBaseUrl
     });
 
+    console.log(`Voice sent to n8n successfully for ${chatId}`);
     await bot.sendMessage(chatId, 'Voice sent! n8n is analyzing...');
   } catch (err) {
     console.error('Voice error:', err.message);
@@ -124,18 +141,23 @@ bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text?.trim().toLowerCase();
 
+  console.log(`Confirm attempt from ${chatId}, draftId: ${draftId}, text: "${text}"`);
+
   if (text === 'confirm') {
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
     try {
       await bot.sendMessage(chatId, 'Creating lead...');
+      console.log(`Sending confirm to n8n: draftId=${draftId}, chatId=${chatId}`);
       await axios.post('https://seyaa.app.n8n.cloud/webhook-test/CONFIRM_LEAD', {
         draftId,
         chatId,
         crmBaseUrl
       });
+      console.log(`Lead creation triggered for draftId: ${draftId}`);
       await bot.sendMessage(chatId, 'Lead created!');
     } catch (err) {
+      console.error('Confirm error:', err.message);
       await bot.sendMessage(chatId, 'Error. Try again.');
     }
   }
