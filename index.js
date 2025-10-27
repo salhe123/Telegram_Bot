@@ -8,7 +8,7 @@ const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
 
 // === LOG STARTUP ===
 console.log('Bot initialized with token:', process.env.TELEGRAM_BOT_TOKEN ? 'YES' : 'NO');
-console.log('Frappe CRM API:', process.env.FRAPPE_CRM_BASE_URL ? 'Configured' : 'Missing');
+console.log('Frapps CRM API:', process.env.FRAPPE_CRM_BASE_URL ? 'Configured' : 'Missing');
 
 // === MIDDLEWARE ===
 app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
@@ -60,8 +60,7 @@ bot.onText(/\/help/, (msg) => {
 *Frappe Lead Bot Help*
 - Send *voice message* to create lead
 - Use */setcrm <URL>* to set CRM
-- Reply *confirm* to save lead
-- Mandatory: *first_name*
+- Tap *Confirm* or *Cancel* on draft
   `, { parse_mode: 'Markdown' });
 });
 
@@ -74,9 +73,45 @@ bot.on('callback_query', async (query) => {
   if (action === 'creat_lead') {
     console.log(`User ${chatId} clicked Create Lead`);
     await bot.sendMessage(chatId, 'Send a *voice message* with lead details.\nSet CRM with */setcrm <URL>* first.', { parse_mode: 'Markdown' });
+
   } else if (action === 'update_lead') {
     console.log(`User ${chatId} clicked Update Lead (coming soon)`);
     await bot.sendMessage(chatId, 'Coming soon...');
+
+  } else if (action.startsWith('confirm_draft:')) {
+    const draftId = action.split(':')[1];
+    const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
+
+    try {
+      await bot.editMessageText('Creating lead in CRM...', {
+        chat_id: chatId,
+        message_id: query.message.message_id
+      });
+      console.log(`Confirm button: draftId=${draftId}, chatId=${chatId}`);
+      await axios.post('https://seyaa.app.n8n.cloud/webhook-test/CONFIRM_LEAD', {
+        draftId,
+        chatId,
+        crmBaseUrl
+      });
+      await bot.editMessageText('Lead created successfully!', {
+        chat_id: chatId,
+        message_id: query.message.message_id
+      });
+    } catch (err) {
+      console.error('Confirm error:', err.message);
+      await bot.editMessageText('Error creating lead. Try again.', {
+        chat_id: chatId,
+        message_id: query.message.message_id
+      });
+    }
+
+  } else if (action.startsWith('cancel_draft:')) {
+    const draftId = action.split(':')[1];
+    console.log(`Cancel button: draftId=${draftId}, chatId=${chatId}`);
+    await bot.editMessageText('Lead draft cancelled.', {
+      chat_id: chatId,
+      message_id: query.message.message_id
+    });
   }
 
   bot.answerCallbackQuery(query.id);
@@ -126,40 +161,6 @@ bot.on('voice', async (msg) => {
   } catch (err) {
     console.error('Voice error:', err.message);
     await bot.sendMessage(chatId, 'Error. Try again.');
-  }
-});
-
-// === CONFIRM REPLY HANDLER ===
-bot.on('message', async (msg) => {
-  if (!msg.reply_to_message?.text) return;
-
-  const replyText = msg.reply_to_message.text;
-  const draftIdMatch = replyText.match(/draftId: `([^`]+)`/);
-  if (!draftIdMatch) return;
-
-  const draftId = draftIdMatch[1];
-  const chatId = msg.chat.id;
-  const text = msg.text?.trim().toLowerCase();
-
-  console.log(`Confirm attempt from ${chatId}, draftId: ${draftId}, text: "${text}"`);
-
-  if (text === 'confirm') {
-    const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
-
-    try {
-      await bot.sendMessage(chatId, 'Creating lead...');
-      console.log(`Sending confirm to n8n: draftId=${draftId}, chatId=${chatId}`);
-      await axios.post('https://seyaa.app.n8n.cloud/webhook-test/CONFIRM_LEAD', {
-        draftId,
-        chatId,
-        crmBaseUrl
-      });
-      console.log(`Lead creation triggered for draftId: ${draftId}`);
-      await bot.sendMessage(chatId, 'Lead created!');
-    } catch (err) {
-      console.error('Confirm error:', err.message);
-      await bot.sendMessage(chatId, 'Error. Try again.');
-    }
   }
 });
 
