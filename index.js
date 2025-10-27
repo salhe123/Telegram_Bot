@@ -99,7 +99,7 @@ bot.on('voice', async (msg) => {
       return;
     }
 
-    await axios.post('https://seyaa.app.n8n.cloud/webhook-test/VOICE_LEAD_TRIGGER', {
+    await axios.post('https://seyaa.app.n8n.cloud/webhook/VOICE_LEAD_TRIGGER', {
       fileUrl,
       chatId,
       crmBaseUrl
