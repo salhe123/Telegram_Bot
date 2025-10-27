@@ -129,7 +129,7 @@ bot.on('message', async (msg) => {
 
     try {
       await bot.sendMessage(chatId, 'Creating lead...');
-      await axios.post('https://seyaa.app.n8n.cloud/webhook-test/CONFIRM_LEAD', {
+      await axios.post('https://seyaa.app.n8n.cloud/webhook/CONFIRM_LEAD', {
         draftId,
         chatId,
         crmBaseUrl
