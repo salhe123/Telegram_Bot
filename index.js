@@ -38,6 +38,17 @@ app.get('/', (req, res) => {
   res.send('Bot running');
 });
 
+// === /save-draft ROUTE (NEW) ===
+app.post('/save-draft', (req, res) => {
+  const { chatId, draftId, leadData } = req.body;
+  console.log(`Saving draft ${draftId} for ${chatId}`);
+  bot.session = bot.session || {};
+  bot.session[chatId] = bot.session[chatId] || {};
+  bot.session[chatId].drafts = bot.session[chatId].drafts || {};
+  bot.session[chatId].drafts[draftId] = { leadData: JSON.parse(leadData) };
+  res.sendStatus(200);
+});
+
 // === /start ===
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
@@ -81,6 +92,15 @@ bot.on('callback_query', async (query) => {
   } else if (action.startsWith('confirm_draft:')) {
     const draftId = action.split(':')[1];
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
+    const leadData = bot.session?.[chatId]?.drafts?.[draftId]?.leadData;
+
+    if (!leadData) {
+      await bot.editMessageText('Draft not found. Try again.', {
+        chat_id: chatId,
+        message_id: query.message.message_id
+      });
+      return;
+    }
 
     try {
       await bot.editMessageText('Creating lead in CRM...', {
@@ -91,7 +111,8 @@ bot.on('callback_query', async (query) => {
       await axios.post('https://seyaa.app.n8n.cloud/webhook-test/CONFIRM_LEAD', {
         draftId,
         chatId,
-        crmBaseUrl
+        crmBaseUrl,
+        leadData: JSON.stringify(leadData) // SEND leadData
       });
       await bot.editMessageText('Lead created successfully!', {
         chat_id: chatId,
@@ -112,6 +133,10 @@ bot.on('callback_query', async (query) => {
       chat_id: chatId,
       message_id: query.message.message_id
     });
+    // Optional: delete from session
+    if (bot.session?.[chatId]?.drafts?.[draftId]) {
+      delete bot.session[chatId].drafts[draftId];
+    }
   }
 
   bot.answerCallbackQuery(query.id);
