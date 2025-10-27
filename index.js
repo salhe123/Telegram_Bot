@@ -38,17 +38,6 @@ app.get('/', (req, res) => {
   res.send('Bot running');
 });
 
-// === /save-draft ROUTE (NEW) ===
-app.post('/save-draft', (req, res) => {
-  const { chatId, draftId, leadData } = req.body;
-  console.log(`Saving draft ${draftId} for ${chatId}`);
-  bot.session = bot.session || {};
-  bot.session[chatId] = bot.session[chatId] || {};
-  bot.session[chatId].drafts = bot.session[chatId].drafts || {};
-  bot.session[chatId].drafts[draftId] = { leadData: JSON.parse(leadData) };
-  res.sendStatus(200);
-});
-
 // === /start ===
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
@@ -92,9 +81,19 @@ bot.on('callback_query', async (query) => {
   } else if (action.startsWith('confirm_draft:')) {
     const draftId = action.split(':')[1];
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
-    const leadData = bot.session?.[chatId]?.drafts?.[draftId]?.leadData;
 
-    if (!leadData) {
+    // FIND DRAFT MESSAGE IN CHAT
+    let draftMessage;
+    try {
+      const history = await bot.getChatHistory(chatId, 0, 20);
+      draftMessage = history.find(m => 
+        m.text && m.text.includes(`draftId: \`${draftId}\``)
+      );
+    } catch (err) {
+      console.error('Failed to get chat history:', err.message);
+    }
+
+    if (!draftMessage) {
       await bot.editMessageText('Draft not found. Try again.', {
         chat_id: chatId,
         message_id: query.message.message_id
@@ -102,18 +101,34 @@ bot.on('callback_query', async (query) => {
       return;
     }
 
+    // PARSE leadData FROM TEXT
+    const text = draftMessage.text;
+    const lines = text.split('\n').filter(l => l.includes(':'));
+    const leadData = {};
+
+    lines.forEach(line => {
+      const match = line.match(/• \*(.+?):\* (.+)/);
+      if (match) {
+        const key = match[1].trim().toLowerCase().replace(/ /g, '_');
+        const value = match[2].trim();
+        leadData[key] = value;
+      }
+    });
+
     try {
       await bot.editMessageText('Creating lead in CRM...', {
         chat_id: chatId,
         message_id: query.message.message_id
       });
-      console.log(`Confirm button: draftId=${draftId}, chatId=${chatId}`);
+
+      console.log(`Confirm: draftId=${draftId}, chatId=${chatId}`);
       await axios.post('https://seyaa.app.n8n.cloud/webhook-test/CONFIRM_LEAD', {
         draftId,
         chatId,
         crmBaseUrl,
-        leadData: JSON.stringify(leadData) // SEND leadData
+        leadData: JSON.stringify(leadData)
       });
+
       await bot.editMessageText('Lead created successfully!', {
         chat_id: chatId,
         message_id: query.message.message_id
@@ -133,10 +148,6 @@ bot.on('callback_query', async (query) => {
       chat_id: chatId,
       message_id: query.message.message_id
     });
-    // Optional: delete from session
-    if (bot.session?.[chatId]?.drafts?.[draftId]) {
-      delete bot.session[chatId].drafts[draftId];
-    }
   }
 
   bot.answerCallbackQuery(query.id);
