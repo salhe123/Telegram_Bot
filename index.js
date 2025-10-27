@@ -8,7 +8,7 @@ const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
 
 // === LOG STARTUP ===
 console.log('Bot initialized with token:', process.env.TELEGRAM_BOT_TOKEN ? 'YES' : 'NO');
-console.log('Frapps CRM API:', process.env.FRAPPE_CRM_BASE_URL ? 'Configured' : 'Missing');
+console.log('Frappe CRM API:', process.env.FRAPPE_CRM_BASE_URL ? 'Configured' : 'Missing');
 
 // === MIDDLEWARE ===
 app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
@@ -82,18 +82,10 @@ bot.on('callback_query', async (query) => {
     const draftId = action.split(':')[1];
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
-    // FIND DRAFT MESSAGE IN CHAT
-    let draftMessage;
-    try {
-      const history = await bot.getChatHistory(chatId, 0, 20);
-      draftMessage = history.find(m => 
-        m.text && m.text.includes(`draftId: \`${draftId}\``)
-      );
-    } catch (err) {
-      console.error('Failed to get chat history:', err.message);
-    }
+    // DRAFT MESSAGE IS THE ONE BEING EDITED → query.message
+    const draftMessage = query.message;
 
-    if (!draftMessage) {
+    if (!draftMessage?.text || !draftMessage.text.includes(`draftId: \`${draftId}\``)) {
       await bot.editMessageText('Draft not found. Try again.', {
         chat_id: chatId,
         message_id: query.message.message_id
@@ -103,7 +95,7 @@ bot.on('callback_query', async (query) => {
 
     // PARSE leadData FROM TEXT
     const text = draftMessage.text;
-    const lines = text.split('\n').filter(l => l.includes(':'));
+    const lines = text.split('\n').filter(l => l.includes(':') && l.includes('*'));
     const leadData = {};
 
     lines.forEach(line => {
@@ -139,7 +131,7 @@ bot.on('callback_query', async (query) => {
         chat_id: chatId,
         message_id: query.message.message_id
       });
-    }
+  }
 
   } else if (action.startsWith('cancel_draft:')) {
     const draftId = action.split(':')[1];
