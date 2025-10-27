@@ -114,7 +114,7 @@ bot.on('callback_query', async (query) => {
       });
 
       console.log(`Confirm: draftId=${draftId}, chatId=${chatId}`);
-      await axios.post('https://seyaa.app.n8n.cloud/webhook-test/CONFIRM_LEAD', {
+      await axios.post('https://seyaa.app.n8n.cloud/webhook/CONFIRM_LEAD', {
         draftId,
         chatId,
         crmBaseUrl,
@@ -178,7 +178,7 @@ bot.on('voice', async (msg) => {
     }
 
     console.log(`Sending voice to n8n: chatId=${chatId}, crmBaseUrl=${crmBaseUrl}`);
-    await axios.post('https://seyaa.app.n8n.cloud/webhook-test/VOICE_LEAD_TRIGGER', {
+    await axios.post('https://seyaa.app.n8n.cloud/webhook/VOICE_LEAD_TRIGGER', {
       fileUrl,
       chatId,
       crmBaseUrl
