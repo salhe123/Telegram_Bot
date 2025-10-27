@@ -114,31 +114,29 @@ bot.on('voice', async (msg) => {
 
 // === CONFIRM REPLY HANDLER ===
 bot.on('message', async (msg) => {
-  if (!msg.reply_to_message) return;
-  if (!msg.text) return;
+  if (!msg.reply_to_message?.text) return;
 
-  const replyText = msg.reply_to_message.text || '';
+  const replyText = msg.reply_to_message.text;
   const draftIdMatch = replyText.match(/draftId: `([^`]+)`/);
   if (!draftIdMatch) return;
 
   const draftId = draftIdMatch[1];
   const chatId = msg.chat.id;
-  const text = msg.text.trim().toLowerCase();
+  const text = msg.text?.trim().toLowerCase();
 
   if (text === 'confirm') {
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
     try {
-      await bot.sendMessage(chatId, 'Creating lead in CRM...');
+      await bot.sendMessage(chatId, 'Creating lead...');
       await axios.post('https://seyaa.app.n8n.cloud/webhook-test/CONFIRM_LEAD', {
         draftId,
         chatId,
         crmBaseUrl
       });
-      await bot.sendMessage(chatId, 'Lead created successfully!');
+      await bot.sendMessage(chatId, 'Lead created!');
     } catch (err) {
-      console.error('Confirm error:', err.message);
-      await bot.sendMessage(chatId, 'Error creating lead. Try again.');
+      await bot.sendMessage(chatId, 'Error. Try again.');
     }
   }
 });
