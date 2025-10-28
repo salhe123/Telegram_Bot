@@ -15,7 +15,7 @@ app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: true, verify: (req, res, buf) => { req.rawBody = buf; } }));
 
 // === SET WEBHOOK ===
-const webhookUrl = `${process.env.VERCEL_EXTERNAL_URL || 'https://telegram-bot-8qcb.onrender.com'}/webhook`;
+const webhookUrl = `${process.env.RENDER_EXTERNAL_URL || 'https://telegram-bot-8qcb.onrender.com'}/webhook`;
 console.log('Setting webhook to:', webhookUrl);
 bot.setWebHook(webhookUrl)
   .then(() => console.log('Webhook set successfully'))
@@ -114,7 +114,7 @@ bot.on('callback_query', async (query) => {
       });
 
       console.log(`Confirm: draftId=${draftId}, chatId=${chatId}`);
-      await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
+      await axios.post('https://seyaa.app.n8n.cloud/webhook/CONFIRM_LEAD', {
         draftId,
         chatId,
         crmBaseUrl,
@@ -178,7 +178,7 @@ bot.on('voice', async (msg) => {
     }
 
     console.log(`Sending voice to n8n: chatId=${chatId}, crmBaseUrl=${crmBaseUrl}`);
-    await axios.post(process.env.N8N_VOICE_WEBHOOK_URL, {
+    await axios.post('https://seyaa.app.n8n.cloud/webhook/VOICE_LEAD_TRIGGER', {
       fileUrl,
       chatId,
       crmBaseUrl
