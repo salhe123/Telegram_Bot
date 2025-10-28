@@ -57,10 +57,26 @@ bot.onText(/\/help/, (msg) => {
   const chatId = msg.chat.id;
   console.log(`/help from chatId: ${chatId}`);
   bot.sendMessage(chatId, `
-*Frappe Lead Bot Help*
-- Send *voice message* to create lead
-- Use */setcrm <URL>* to set CRM
-- Tap *Confirm* or *Cancel* on draft
+*Frappe Lead Bot – Quick Help*
+
+*1. Set your CRM first*  
+→ Type: \`/setcrm https://your-crm.fr8labs.co\`
+
+*2. Record a clear voice note*  
+→ Speak slowly & clearly (fname, lname, email, phone, company…)  
+→ Avoid background noise for best results
+
+*3. Review & Confirm*  
+→ Bot shows a draft → tap *Confirm* to create lead  
+→ Missing *First Name*? Bot will ask you to reply with it
+
+*4. Get CRM link*  
+→ Lead created → you receive direct link
+
+*Tip:* Use English. Speak one detail at a time.  
+*Example:* “John Doe, john@gmail.com, 0912345678, ABC Corp”
+
+Need help? Just type /help anytime!
   `, { parse_mode: 'Markdown' });
 });
 
