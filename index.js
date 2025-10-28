@@ -15,7 +15,7 @@ app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: true, verify: (req, res, buf) => { req.rawBody = buf; } }));
 
 // === SET WEBHOOK ===
-const webhookUrl = `${process.env.RENDER_EXTERNAL_URL || 'https://telegram-bot-8qcb.onrender.com'}/webhook`;
+const webhookUrl = `${process.env.VERCEL_EXTERNAL_URL || 'https://telegram-bot-8qcb.onrender.com'}/webhook`;
 console.log('Setting webhook to:', webhookUrl);
 bot.setWebHook(webhookUrl)
   .then(() => console.log('Webhook set successfully'))
