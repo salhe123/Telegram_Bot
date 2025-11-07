@@ -23,25 +23,17 @@ bot.setWebHook(webhookUrl)
 
 // === WEBHOOK ROUTE ===
 app.post('/webhook', (req, res) => {
-  if (!req.body || !req.body.update_id) {
-    console.log('Invalid webhook payload received');
-    return res.sendStatus(200);
-  }
-  console.log('Webhook update received:', req.body.update_id);
+  if (!req.body || !req.body.update_id) return res.sendStatus(200);
   bot.processUpdate(req.body);
   res.sendStatus(200);
 });
 
 // === ROOT ROUTE ===
-app.get('/', (req, res) => {
-  console.log('Health check: /');
-  res.send('Bot running');
-});
+app.get('/', (req, res) => res.send('Bot running'));
 
 // === /start ===
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  console.log(`/start from chatId: ${chatId}`);
   bot.sendMessage(chatId, 'Welcome to Frappe Lead Bot!', {
     reply_markup: {
       inline_keyboard: [
@@ -55,28 +47,22 @@ bot.onText(/\/start/, (msg) => {
 // === /help ===
 bot.onText(/\/help/, (msg) => {
   const chatId = msg.chat.id;
-  console.log(`/help from chatId: ${chatId}`);
   bot.sendMessage(chatId, `
 *Frappe Lead Bot – Quick Help*
 
-*1. Set your CRM first*  
-→ Type: \`/setcrm https://your-crm.fr8labs.co\`
+*1. Set your CRM*  
+→ \`/setcrm https://your-crm.fr8labs.co\`
 
-*2. Record a clear voice note*  
-→ Speak slowly & clearly (fname, lname, email, phone, company…)  
-→ Avoid background noise for best results
+*2. Create Lead*  
+→ Send voice → Confirm draft
 
-*3. Review & Confirm*  
-→ Bot shows a draft → tap *Confirm* to create lead  
-→ Missing *First Name*? Bot will ask you to reply with it
+*3. Update Lead*  
+→ Type: \`/updatelead Acme\` → See top 5 results
 
-*4. Get CRM link*  
-→ Lead created → you receive direct link
+*4. Search Tips*  
+→ Use org name, contact name, or lead ID
 
-*Tip:* Use English. Speak one detail at a time.  
-*Example:* “John Doe, john@gmail.com, 0912345678, ABC Corp”
-
-Need help? Just type /help anytime!
+Need help? Just type /help!
   `, { parse_mode: 'Markdown' });
 });
 
@@ -84,36 +70,24 @@ Need help? Just type /help anytime!
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const action = query.data;
-  console.log(`Callback from ${chatId}: ${action}`);
 
   if (action === 'creat_lead') {
-    console.log(`User ${chatId} clicked Create Lead`);
     await bot.sendMessage(chatId, 'Send a *voice message* with lead details.\nSet CRM with */setcrm <URL>* first.', { parse_mode: 'Markdown' });
 
   } else if (action === 'update_lead') {
-    console.log(`User ${chatId} clicked Update Lead (coming soon)`);
-    await bot.sendMessage(chatId, 'Coming soon...');
+    await bot.sendMessage(chatId, 'Type: `/updatelead Acme` or `/updatelead John`', { parse_mode: 'Markdown' });
 
   } else if (action.startsWith('confirm_draft:')) {
     const draftId = action.split(':')[1];
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
-
-    // DRAFT MESSAGE IS THE ONE BEING EDITED → query.message
     const draftMessage = query.message;
 
     if (!draftMessage?.text || !draftMessage.text.includes(`draftId: \`${draftId}\``)) {
-      await bot.editMessageText('Draft not found. Try again.', {
-        chat_id: chatId,
-        message_id: query.message.message_id
-      });
-      return;
+      return bot.editMessageText('Draft not found.', { chat_id: chatId, message_id: query.message.message_id });
     }
 
-    // PARSE leadData FROM TEXT
-    const text = draftMessage.text;
-    const lines = text.split('\n').filter(l => l.includes(':') && l.includes('*'));
+    const lines = draftMessage.text.split('\n').filter(l => l.includes(':') && l.includes('*'));
     const leadData = {};
-
     lines.forEach(line => {
       const match = line.match(/• \*(.+?):\* (.+)/);
       if (match) {
@@ -124,38 +98,15 @@ bot.on('callback_query', async (query) => {
     });
 
     try {
-      await bot.editMessageText('Creating lead in CRM...', {
-        chat_id: chatId,
-        message_id: query.message.message_id
-      });
-
-      console.log(`Confirm: draftId=${draftId}, chatId=${chatId}`);
-      await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
-        draftId,
-        chatId,
-        crmBaseUrl,
-        leadData: JSON.stringify(leadData)
-      });
-
-      await bot.editMessageText('Waiting...!', {
-        chat_id: chatId,
-        message_id: query.message.message_id
-      });
+      await bot.editMessageText('Creating lead...', { chat_id: chatId, message_id: query.message.message_id });
+      await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, { draftId, chatId, crmBaseUrl, leadData: JSON.stringify(leadData) });
+      await bot.editMessageText('Waiting for CRM...', { chat_id: chatId, message_id: query.message.message_id });
     } catch (err) {
-      console.error('Confirm error:', err.message);
-      await bot.editMessageText('Error creating lead. Try again.', {
-        chat_id: chatId,
-        message_id: query.message.message_id
-      });
-  }
+      await bot.editMessageText('Error. Try again.', { chat_id: chatId, message_id: query.message.message_id });
+    }
 
   } else if (action.startsWith('cancel_draft:')) {
-    const draftId = action.split(':')[1];
-    console.log(`Cancel button: draftId=${draftId}, chatId=${chatId}`);
-    await bot.editMessageText('Lead draft cancelled.', {
-      chat_id: chatId,
-      message_id: query.message.message_id
-    });
+    await bot.editMessageText('Cancelled.', { chat_id: chatId, message_id: query.message.message_id });
   }
 
   bot.answerCallbackQuery(query.id);
@@ -164,55 +115,82 @@ bot.on('callback_query', async (query) => {
 // === /setcrm ===
 bot.onText(/\/setcrm (.+)/, (msg, match) => {
   const chatId = msg.chat.id;
-  const crmUrl = match[1].trim();
-  console.log(`Set CRM URL for ${chatId}: ${crmUrl}`);
+  const url = match[1].trim();
   bot.session = bot.session || {};
   bot.session[chatId] = bot.session[chatId] || {};
-  bot.session[chatId].crmBaseUrl = crmUrl;
-  bot.sendMessage(chatId, `CRM set to: \`${crmUrl}\``, { parse_mode: 'Markdown' });
+  bot.session[chatId].crmBaseUrl = url;
+  bot.sendMessage(chatId, `CRM set to: \`${url}\``, { parse_mode: 'Markdown' });
+});
+
+// === /updatelead SEARCH ===
+bot.onText(/\/updatelead (.+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const query = match[1].trim();
+  const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
+
+  if (!crmBaseUrl) return bot.sendMessage(chatId, 'Set CRM first: */setcrm <URL>*', { parse_mode: 'Markdown' });
+
+  try {
+    const res = await axios.get(`${crmBaseUrl}/api/resource/CRM Lead`, {
+      params: {
+        filters: JSON.stringify([
+          ["organization", "like", `%${query}%`],
+          "or",
+          ["first_name", "like", `%${query}%`]
+        ]),
+        fields: JSON.stringify(["name", "organization", "first_name", "last_name", "status", "owner", "modified"]),
+        limit_page_length: 5
+      },
+      headers: { 'Authorization': `token ${process.env.FRAPPE_API_KEY}:${process.env.FRAPPE_SECRET_KEY}` }
+    });
+
+    if (!res.data.data?.length) {
+      return bot.sendMessage(chatId, `No leads found for "${query}"`);
+    }
+
+    const lines = res.data.data.map((l, i) => {
+      const name = [l.first_name, l.last_name].filter(Boolean).join(' ') || '—';
+      return `*[${i+1}] ${l.name}* | ${l.organization || '—'} — ${name} | ${l.status || '—'} | Owner: ${l.owner || '—'} | ${l.modified.split(' ')[0]}`;
+    }).join('\n\n');
+
+    const keyboard = res.data.data.map((_, i) => [{ text: `${i+1}`, callback_data: `select_lead:${i}` }]);
+    keyboard.push([
+      { text: 'More', callback_data: 'more' },
+      { text: 'Filter', callback_data: 'filter' },
+      { text: 'Create new', callback_data: 'creat_lead' }
+    ]);
+
+    await bot.sendMessage(chatId, `Found ${res.data.data.length} leads:\n\n${lines}`, {
+      parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: keyboard }
+    });
+
+  } catch (err) {
+    bot.sendMessage(chatId, 'Search failed. Check CRM URL.');
+  }
 });
 
 // === VOICE HANDLER ===
 bot.on('voice', async (msg) => {
   const chatId = msg.chat.id;
   const fileId = msg.voice.file_id;
-  console.log(`Voice message from ${chatId}, fileId: ${fileId}`);
 
   try {
     await bot.sendMessage(chatId, 'Processing voice...');
-
     const file = await bot.getFile(fileId);
-    if (!file?.file_path) throw new Error('No file path');
-
     const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
-    if (!crmBaseUrl) {
-      console.log(`CRM URL missing for ${chatId}`);
-      await bot.sendMessage(chatId, 'Set CRM first: */setcrm <URL>*', { parse_mode: 'Markdown' });
-      return;
-    }
+    if (!crmBaseUrl) return bot.sendMessage(chatId, 'Set CRM: */setcrm <URL>*', { parse_mode: 'Markdown' });
 
-    console.log(`Sending voice to n8n: chatId=${chatId}, crmBaseUrl=${crmBaseUrl}`);
-    await axios.post(process.env.N8N_VOICE_WEBHOOK_URL, {
-      fileUrl,
-      chatId,
-      crmBaseUrl
-    });
-
-    console.log(`Voice sent to n8n successfully for ${chatId}`);
-    await bot.sendMessage(chatId, 'Voice sent! n8n is analyzing...');
+    await axios.post(process.env.N8N_VOICE_WEBHOOK_URL, { fileUrl, chatId, crmBaseUrl });
+    await bot.sendMessage(chatId, 'Voice sent! Analyzing...');
   } catch (err) {
-    console.error('Voice error:', err.message);
-    await bot.sendMessage(chatId, 'Error. Try again.');
+    bot.sendMessage(chatId, 'Error. Try again.');
   }
 });
 
-// === ERROR HANDLING ===
-bot.on('error', (e) => console.error('Bot error:', e));
-bot.on('polling_error', (e) => console.error('Polling error:', e));
-
-// === START SERVER ===
+// === SERVER ===
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
