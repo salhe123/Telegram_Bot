@@ -130,20 +130,28 @@ bot.onText(/\/updatelead (.+)/, async (msg, match) => {
 
   if (!crmBaseUrl) return bot.sendMessage(chatId, 'Set CRM first: */setcrm <URL>*', { parse_mode: 'Markdown' });
 
+  const filters = [
+    ["or",
+      ["organization", "like", `%${query}%`],
+      ["first_name", "like", `%${query}%`]
+    ]
+  ];
+
+  console.log('SEARCH QUERY:', query);
+  console.log('CRM URL:', crmBaseUrl);
+  console.log('FILTERS:', JSON.stringify(filters));
+
   try {
     const res = await axios.get(`${crmBaseUrl}/api/resource/CRM Lead`, {
       params: {
-        filters: JSON.stringify([
-  ["or",
-    ["organization", "like", `%${query}%`],
-    ["first_name", "like", `%${query}%`]
-  ]
-]),
+        filters: JSON.stringify(filters),
         fields: JSON.stringify(["name", "organization", "first_name", "last_name", "status", "owner", "modified"]),
         limit_page_length: 5
       },
       headers: { 'Authorization': `token ${process.env.FRAPPE_API_KEY}:${process.env.FRAPPE_SECRET_KEY}` }
     });
+
+    console.log('API RESPONSE:', res.data);
 
     if (!res.data.data?.length) {
       return bot.sendMessage(chatId, `No leads found for "${query}"`);
@@ -154,7 +162,7 @@ bot.onText(/\/updatelead (.+)/, async (msg, match) => {
       return `*[${i+1}] ${l.name}* | ${l.organization || '—'} — ${name} | ${l.status || '—'} | Owner: ${l.owner || '—'} | ${l.modified.split(' ')[0]}`;
     }).join('\n\n');
 
-    const keyboard = res.data.data.map((_, i) => [{ text: `${i+1}`, callback_data: `select_lead:${i}` }]);
+    const keyboard = res.data.data.map((_, i) => [{ text: `${i+1}`, callback_data: `select_lead:${res.data.data[i].name}` }]);
     keyboard.push([
       { text: 'More', callback_data: 'more' },
       { text: 'Filter', callback_data: 'filter' },
@@ -167,7 +175,7 @@ bot.onText(/\/updatelead (.+)/, async (msg, match) => {
     });
 
   } catch (err) {
-    console.error('Search error:', err.response?.data || err.message);
+    console.error('SEARCH ERROR:', err.response?.data || err.message);
     bot.sendMessage(chatId, 'Search failed. Check CRM URL or query.');
   }
 });
