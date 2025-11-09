@@ -135,7 +135,6 @@ bot.onText(/\/updatelead (.+)/, async (msg, match) => {
       params: {
         filters: JSON.stringify([
           ["organization", "like", `%${query}%`],
-          "or",
           ["first_name", "like", `%${query}%`]
         ]),
         fields: JSON.stringify(["name", "organization", "first_name", "last_name", "status", "owner", "modified"]),
@@ -166,7 +165,8 @@ bot.onText(/\/updatelead (.+)/, async (msg, match) => {
     });
 
   } catch (err) {
-    bot.sendMessage(chatId, 'Search failed. Check CRM URL.');
+    console.error('Search error:', err.response?.data || err.message);
+    bot.sendMessage(chatId, 'Search failed. Check CRM URL or query.');
   }
 });
 
