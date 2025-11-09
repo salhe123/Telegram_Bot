@@ -122,7 +122,7 @@ bot.onText(/\/setcrm (.+)/, (msg, match) => {
   bot.sendMessage(chatId, `CRM set to: \`${url}\``, { parse_mode: 'Markdown' });
 });
 
-// === /updatelead SEARCH ===
+// === /updatelead SEARCH (2 API CALLS) ===
 bot.onText(/\/updatelead (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const query = match[1].trim();
@@ -130,53 +130,66 @@ bot.onText(/\/updatelead (.+)/, async (msg, match) => {
 
   if (!crmBaseUrl) return bot.sendMessage(chatId, 'Set CRM first: */setcrm <URL>*', { parse_mode: 'Markdown' });
 
-  const filters = [
-    ["or",
-      ["organization", "like", `%${query}%`],
-      ["first_name", "like", `%${query}%`]
-    ]
-  ];
-
   console.log('SEARCH QUERY:', query);
   console.log('CRM URL:', crmBaseUrl);
-  console.log('FILTERS:', JSON.stringify(filters));
 
   try {
-    const res = await axios.get(`${crmBaseUrl}/api/resource/CRM Lead`, {
+    // CALL 1: org
+    const orgRes = await axios.get(`${crmBaseUrl}/api/resource/CRM Lead`, {
       params: {
-        filters: JSON.stringify(filters),
+        filters: JSON.stringify([["organization", "like", `%${query}%`]]),
         fields: JSON.stringify(["name", "organization", "first_name", "last_name", "status", "owner", "modified"]),
         limit_page_length: 5
       },
       headers: { 'Authorization': `token ${process.env.FRAPPE_API_KEY}:${process.env.FRAPPE_SECRET_KEY}` }
     });
 
-    console.log('API RESPONSE:', res.data);
+    // CALL 2: first_name
+    const nameRes = await axios.get(`${crmBaseUrl}/api/resource/CRM Lead`, {
+      params: {
+        filters: JSON.stringify([["first_name", "like", `%${query}%`]]),
+        fields: JSON.stringify(["name", "organization", "first_name", "last_name", "status", "owner", "modified"]),
+        limit_page_length: 5
+      },
+      headers: { 'Authorization': `token ${process.env.FRAPPE_API_KEY}:${process.env.FRAPPE_SECRET_KEY}` }
+    });
 
-    if (!res.data.data?.length) {
+    // MERGE & DEDUPE
+    const seen = new Set();
+    const combined = [...orgRes.data.data, ...nameRes.data.data]
+      .filter(l => {
+        if (seen.has(l.name)) return false;
+        seen.add(l.name);
+        return true;
+      })
+      .slice(0, 5);
+
+    console.log('COMBINED RESULTS:', combined);
+
+    if (!combined.length) {
       return bot.sendMessage(chatId, `No leads found for "${query}"`);
     }
 
-    const lines = res.data.data.map((l, i) => {
+    const lines = combined.map((l, i) => {
       const name = [l.first_name, l.last_name].filter(Boolean).join(' ') || '—';
       return `*[${i+1}] ${l.name}* | ${l.organization || '—'} — ${name} | ${l.status || '—'} | Owner: ${l.owner || '—'} | ${l.modified.split(' ')[0]}`;
     }).join('\n\n');
 
-    const keyboard = res.data.data.map((_, i) => [{ text: `${i+1}`, callback_data: `select_lead:${res.data.data[i].name}` }]);
+    const keyboard = combined.map((_, i) => [{ text: `${i+1}`, callback_data: `select_lead:${combined[i].name}` }]);
     keyboard.push([
       { text: 'More', callback_data: 'more' },
       { text: 'Filter', callback_data: 'filter' },
       { text: 'Create new', callback_data: 'creat_lead' }
     ]);
 
-    await bot.sendMessage(chatId, `Found ${res.data.data.length} leads:\n\n${lines}`, {
+    await bot.sendMessage(chatId, `Found ${combined.length} leads:\n\n${lines}`, {
       parse_mode: 'Markdown',
       reply_markup: { inline_keyboard: keyboard }
     });
 
   } catch (err) {
     console.error('SEARCH ERROR:', err.response?.data || err.message);
-    bot.sendMessage(chatId, 'Search failed. Check CRM URL or query.');
+    bot.sendMessage(chatId, 'Search failed. Check CRM URL.');
   }
 });
 
