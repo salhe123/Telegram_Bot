@@ -134,9 +134,11 @@ bot.onText(/\/updatelead (.+)/, async (msg, match) => {
     const res = await axios.get(`${crmBaseUrl}/api/resource/CRM Lead`, {
       params: {
         filters: JSON.stringify([
-          ["organization", "like", `%${query}%`],
-          ["first_name", "like", `%${query}%`]
-        ]),
+  ["or",
+    ["organization", "like", `%${query}%`],
+    ["first_name", "like", `%${query}%`]
+  ]
+]),
         fields: JSON.stringify(["name", "organization", "first_name", "last_name", "status", "owner", "modified"]),
         limit_page_length: 5
       },
