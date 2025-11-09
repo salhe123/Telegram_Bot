@@ -77,7 +77,14 @@ bot.on('callback_query', async (query) => {
   } else if (action === 'update_lead') {
     await bot.sendMessage(chatId, 'Type: `/updatelead Acme` or `/updatelead John`', { parse_mode: 'Markdown' });
 
-  } else if (action.startsWith('confirm_draft:')) {
+
+  } 
+  else if (action.startsWith('select_lead:')) {
+  const leadName = action.split(':')[1];
+  bot.session[chatId] = bot.session[chatId] || {};
+  bot.session[chatId].selectedLead = leadName;
+  await bot.sendMessage(chatId, `Selected: *${leadName}*\n\nSend *voice* to update.`, { parse_mode: 'Markdown' });
+}else if (action.startsWith('confirm_draft:')) {
     const draftId = action.split(':')[1];
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
     const draftMessage = query.message;
@@ -206,8 +213,20 @@ bot.on('voice', async (msg) => {
 
     if (!crmBaseUrl) return bot.sendMessage(chatId, 'Set CRM: */setcrm <URL>*', { parse_mode: 'Markdown' });
 
-    await axios.post(process.env.N8N_VOICE_WEBHOOK_URL, { fileUrl, chatId, crmBaseUrl });
-    await bot.sendMessage(chatId, 'Voice sent! Analyzing...');
+    const payload = { fileUrl, chatId, crmBaseUrl };
+
+    if (bot.session[chatId]?.selectedLead) {
+      payload.leadName = bot.session[chatId].selectedLead;
+      payload.isUpdate = true;
+      delete bot.session[chatId].selectedLead;
+    }
+
+    await axios.post(
+      payload.isUpdate ? process.env.N8N_UPDATE_WEBHOOK_URL : process.env.N8N_VOICE_WEBHOOK_URL,
+      payload
+    );
+
+    await bot.sendMessage(chatId, payload.isUpdate ? 'Updating lead...' : 'Analyzing...');
   } catch (err) {
     bot.sendMessage(chatId, 'Error. Try again.');
   }
