@@ -115,44 +115,29 @@ bot.on('callback_query', async (query) => {
     console.log(`[CALLBACK] select_lead → saved: ${leadName}`);
     await bot.sendMessage(chatId, `Selected: *${leadName}*\n\nSend *voice* to update.`, { parse_mode: 'Markdown' });
 
-  } else if (action.startsWith('confirm_draft:')) {
+  } 
+     else if (action.startsWith('confirm_draft:')) {
     const draftId = action.split(':')[1];
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
-    const draftMessage = query.message;
 
-    console.log(`[CALLBACK] confirm_draft → draftId: ${draftId} | crm: ${crmBaseUrl}`);
-
-    if (!draftMessage?.text || !draftMessage.text.includes(`draftId: \`${draftId}\``)) {
-      console.log('[CALLBACK] confirm_draft → Draft not found in message');
-      return bot.editMessageText('Draft not found.', { chat_id: chatId, message_id: query.message.message_id });
-    }
-
-    const lines = draftMessage.text.split('\n').filter(l => l.includes(':') && l.includes('*'));
-    const leadData = {};
-    lines.forEach(line => {
-      const match = line.match(/• \*(.+?):\* (.+)/);
-      if (match) {
-        const key = match[1].trim().toLowerCase().replace(/ /g, '_');
-        const value = match[2].trim();
-        leadData[key] = value;
-      }
-    });
-
-    console.log('[CALLBACK] confirm_draft → extracted leadData:', leadData);
+    console.log(`[CALLBACK] confirm_draft → draftId: ${draftId}`);
 
     try {
       await bot.editMessageText('Creating lead...', { chat_id: chatId, message_id: query.message.message_id });
-      console.log('[CALLBACK] confirm_draft → POST to N8N_CONFIRM_WEBHOOK_URL');
+
+      // Get leadData from n8n (sent as draftData in message)
+      const leadData = query.message.draftData ? JSON.parse(query.message.draftData) : {};
+
       await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
         draftId,
         chatId,
         crmBaseUrl,
         leadData: JSON.stringify(leadData)
       });
-      console.log('[CALLBACK] confirm_draft → SUCCESS: sent to n8n');
+
       await bot.editMessageText('Waiting for CRM...', { chat_id: chatId, message_id: query.message.message_id });
     } catch (err) {
-      console.error('[CALLBACK] confirm_draft → ERROR:', err.response?.data || err.message);
+      console.error('[CALLBACK] ERROR:', err.message);
       await bot.editMessageText('Error. Try again.', { chat_id: chatId, message_id: query.message.message_id });
     }
 
