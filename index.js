@@ -115,8 +115,7 @@ bot.on('callback_query', async (query) => {
     console.log(`[CALLBACK] select_lead → saved: ${leadName}`);
     await bot.sendMessage(chatId, `Selected: *${leadName}*\n\nSend *voice* to update.`, { parse_mode: 'Markdown' });
 
-  } 
-     else if (action.startsWith('confirm_draft:')) {
+  } else if (action.startsWith('confirm_draft:')) {
     const draftId = action.split(':')[1];
     const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
@@ -240,7 +239,6 @@ bot.on('voice', async (msg) => {
 
   console.log(`[VOICE] Received | chatId: ${chatId} | fileId: ${fileId}`);
 
-  // INIT SESSION
   bot.session = bot.session || {};
   bot.session[chatId] = bot.session[chatId] || {};
 
