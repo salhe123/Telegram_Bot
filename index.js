@@ -256,6 +256,10 @@ bot.on('voice', async (msg) => {
 
   console.log(`[VOICE] Received | chatId: ${chatId} | fileId: ${fileId}`);
 
+  // INIT SESSION
+  bot.session = bot.session || {};
+  bot.session[chatId] = bot.session[chatId] || {};
+
   try {
     await bot.sendMessage(chatId, 'Processing voice...');
     console.log('[VOICE] Getting file link...');
@@ -263,14 +267,14 @@ bot.on('voice', async (msg) => {
     const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
     console.log('[VOICE] File URL:', fileUrl);
 
-    const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
+    const crmBaseUrl = bot.session[chatId].crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
     if (!crmBaseUrl) {
       console.log('[VOICE] CRM not set');
       return bot.sendMessage(chatId, 'Set CRM: */setcrm <URL>*', { parse_mode: 'Markdown' });
     }
 
     const payload = { fileUrl, chatId, crmBaseUrl };
-    const isUpdate = !!bot.session[chatId]?.selectedLead;
+    const isUpdate = !!bot.session[chatId].selectedLead;
 
     if (isUpdate) {
       payload.leadName = bot.session[chatId].selectedLead;
@@ -290,7 +294,7 @@ bot.on('voice', async (msg) => {
 
     await bot.sendMessage(chatId, isUpdate ? 'Updating lead...' : 'Analyzing...');
   } catch (err) {
-    console.error('[VOICE] ERROR:', err.response?.data || err.message);
+    console.error('[VOICE] ERROR:', err.message);
     bot.sendMessage(chatId, 'Error. Try again.');
   }
 });
