@@ -69,7 +69,6 @@ bot.onText(/\/start/, (msg) => {
   });
 });
 
-// === /help ===
 bot.onText(/\/help/, (msg) => {
   const chatId = msg.chat.id;
   console.log(`[COMMAND /help] chatId: ${chatId}`);
@@ -87,6 +86,9 @@ bot.onText(/\/help/, (msg) => {
 
 *4. Search Tips*  
 → Use org name, contact name, or lead ID
+
+*5. Health Check*  
+→ \`/health\` or visit: \`${process.env.RENDER_EXTERNAL_URL || 'https://your-bot.onrender.com'}/health\`
 
 Need help? Just type /help!
   `, { parse_mode: 'Markdown' });
