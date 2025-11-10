@@ -285,7 +285,7 @@ bot.on('voice', async (msg) => {
       console.log('[VOICE] CREATE MODE → no selected lead');
     }
 
-    const webhookUrl = isUpdate ? process.env.N8N_UPDATE_WEBHOOK_URL : process.env.N8N_VOICE_WEBHOOK_URL;
+    const webhookUrl = isUpdate ? process.env.N8N_VOICE_WEBHOOK_URL : process.env.N8N_VOICE_WEBHOOK_URL;
     console.log(`[VOICE] POST to n8n → ${webhookUrl}`);
     console.log('[VOICE] Payload:', JSON.stringify(payload, null, 2));
 
