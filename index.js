@@ -74,20 +74,15 @@ bot.onText(/\/help/, (msg) => {
   bot.sendMessage(chatId, `
 *Frappe Lead Bot – Quick Help*
 
-*1. Set your CRM*  
-→ \`/setcrm https://your-crm.fr8labs.co\`
+*1. Set your CRM* → \`/setcrm https://your-crm.fr8labs.co\`
 
-*2. Create Lead*  
-→ Send voice → Confirm draft
+*2. Create Lead* → Send voice → Confirm draft
 
-*3. Update Lead*  
-→ Type: \`/updatelead Acme\` → See top 5 results
+*3. Update Lead* → Type: \`/updatelead Acme\` → See top 5 results
 
-*4. Search Tips*  
-→ Use org name, contact name, or lead ID
+*4. Search Tips* → Use org name, contact name, or lead ID
 
-*5. Health Check*  
-→ \`/health\` or visit: \`${process.env.RENDER_EXTERNAL_URL || 'https://your-bot.onrender.com'}/health\`
+*5. Health Check* → \`/health\` or visit: \`${process.env.RENDER_EXTERNAL_URL || 'https://your-bot.onrender.com'}/health\`
 
 Need help? Just type /help!
   `, { parse_mode: 'Markdown' });
@@ -124,14 +119,16 @@ bot.on('callback_query', async (query) => {
     try {
       await bot.editMessageText('Creating lead...', { chat_id: chatId, message_id: query.message.message_id });
 
-      // Get leadData from n8n (sent as draftData in message)
-      const leadData = query.message.draftData ? JSON.parse(query.message.draftData) : {};
+      // FIX: The query.message.draftData is deleted by Telegram. 
+      // We rely solely on the draftId to retrieve the full session data from the n8n Wait node.
+      // Removed: const leadData = query.message.draftData ? JSON.parse(query.message.draftData) : {};
+      // Removed: console.log('[CALLBACK] confirm_draft → leadData:', leadData);
 
       await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
-        draftId,
+        draftId: draftId, // Send only the unique ID
         chatId,
-        crmBaseUrl,
-        leadData: JSON.stringify(leadData)
+        crmBaseUrl
+        // Removed: leadData: JSON.stringify(leadData) // Stop sending the empty {}
       });
 
       await bot.editMessageText('Waiting for CRM...', { chat_id: chatId, message_id: query.message.message_id });
