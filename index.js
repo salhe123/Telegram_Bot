@@ -93,6 +93,15 @@ Need help? Just type /help!
   `, { parse_mode: 'Markdown' });
 });
 
+// Add route in Express
+app.post('/save-draft', (req, res) => {
+  const { draftId, chatId, crmBaseUrl } = req.body;
+  bot.session = bot.session || {};
+  bot.session[draftId] = { chatId, crmBaseUrl };
+  console.log('[SAVE DRAFT]', { draftId, chatId, crmBaseUrl });
+  res.sendStatus(200);
+});
+
 // === CALLBACKS ===
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
@@ -117,37 +126,40 @@ bot.on('callback_query', async (query) => {
 
   } else if (action.startsWith('confirm_draft:')) {
   const draftId = action.split(':')[1];
-  const draftMessage = query.message;
+  const session = bot.session?.[draftId];
 
-  // PARSE leadData FROM TEXT (you already have this)
-  const text = draftMessage.text;
-  const lines = text.split('\n').filter(l => l.includes(':') && l.includes('*'));
+  if (!session) {
+    return bot.editMessageText('Draft expired.', { chat_id: chatId, message_id: query.message.message_id });
+  }
+
+  const { crmBaseUrl, chatId: savedChatId } = session;
+
+  // Parse leadData from text
   const leadData = {};
-  lines.forEach(line => {
-    const match = line.match(/• \*(.+?):\* (.+)/);
-    if (match) {
-      const key = match[1].trim().toLowerCase().replace(/ /g, '_');
-      const value = match[2].trim();
-      leadData[key] = value;
-    }
-  });
+  query.message.text.split('\n')
+    .filter(l => l.includes('*') && l.includes(':'))
+    .forEach(line => {
+      const match = line.match(/• \*(.+?):\* (.+)/);
+      if (match) {
+        leadData[match[1].trim().toLowerCase().replace(/ /g, '_')] = match[2].trim();
+      }
+    });
 
   try {
-    await bot.editMessageText('Creating lead...', { chat_id: chatId, message_id: query.message.message_id });
+    await bot.editMessageText('Creating lead...', { chat_id: savedChatId, message_id: query.message.message_id });
 
     await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
       draftId,
-      chatId,
+      chatId: savedChatId,
       crmBaseUrl,
       leadData: JSON.stringify(leadData)
     });
 
-    await bot.editMessageText('Waiting for CRM...', { chat_id: chatId, message_id: query.message.message_id });
+    await bot.editMessageText('Waiting for CRM...', { chat_id: savedChatId, message_id: query.message.message_id });
   } catch (err) {
-    console.log("the webhook url is ", process.env.N8N_CONFIRM_WEBHOOK_URL);
-    await bot.editMessageText('Error.', { chat_id: chatId, message_id: query.message.message_id });
+    await bot.editMessageText('Error.', { chat_id: savedChatId, message_id: query.message.message_id });
   }
-}else if (action === 'cancel_draft') {  // ← NO :
+} else if (action === 'cancel_draft') {  // ← NO :
   console.log('[CALLBACK] cancel_draft → user cancelled');
   await bot.editMessageText('Cancelled.', { chat_id: chatId, message_id: query.message.message_id });
 }
