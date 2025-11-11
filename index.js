@@ -122,25 +122,36 @@ bot.on('callback_query', async (query) => {
   console.log(`[CALLBACK] confirm_draft → draftId: ${draftId}`);
 
   try {
-    await bot.editMessageText('Creating lead...', { chat_id: chatId, message_id: query.message.message_id });
+    await bot.editMessageText('Creating lead...', { 
+      chat_id: chatId, 
+      message_id: query.message.message_id 
+    });
 
-    // DO NOT READ FROM query.message → NOT SENT
+    // SEND ONLY draftId → n8n fetches leadData
     await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
       draftId,
       chatId,
-      crmBaseUrl,
-      leadData: "{}" 
+      crmBaseUrl
     });
 
-    await bot.editMessageText('Waiting for CRM...', { chat_id: chatId, message_id: query.message.message_id });
+    await bot.editMessageText('Waiting for CRM...', { 
+      chat_id: chatId, 
+      message_id: query.message.message_id 
+    });
   } catch (err) {
     console.error('[CALLBACK] ERROR:', err.message);
-    await bot.editMessageText('Error. Try again.', { chat_id: chatId, message_id: query.message.message_id });
+    await bot.editMessageText('Error. Try again.', { 
+      chat_id: chatId, 
+      message_id: query.message.message_id 
+    });
   }
 
-} else if (action === 'cancel_draft') {  // ← NO :
+} else if (action === 'cancel_draft') {
   console.log('[CALLBACK] cancel_draft → user cancelled');
-  await bot.editMessageText('Cancelled.', { chat_id: chatId, message_id: query.message.message_id });
+  await bot.editMessageText('Cancelled.', { 
+    chat_id: chatId, 
+    message_id: query.message.message_id 
+  });
 }
 
   bot.answerCallbackQuery(query.id);
