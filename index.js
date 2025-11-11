@@ -96,6 +96,7 @@ Need help? Just type /help!
 
 
 
+
 // === CALLBACKS ===
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
@@ -112,6 +113,7 @@ bot.on('callback_query', async (query) => {
 
   } else if (action.startsWith('select_lead:')) {
     const leadName = action.split(':')[1];
+    console.log(`[CALLBACK] select_lead → selected: ${leadName}`);
     bot.session = bot.session || {};
     bot.session[chatId] = bot.session[chatId] || {};
     bot.session[chatId].selectedLead = leadName;
@@ -141,7 +143,7 @@ bot.on('callback_query', async (query) => {
     await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
       draftId,
       chatId,
-      leadData: JSON.stringify(leadData)  // ← NOW HAS DATA
+      leadData: JSON.stringify(leadData) 
     });
 
     await bot.editMessageText('Waiting for CRM...', { 
