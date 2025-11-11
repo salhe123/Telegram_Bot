@@ -113,7 +113,6 @@ bot.on('callback_query', async (query) => {
 
   } else if (action.startsWith('select_lead:')) {
     const leadName = action.split(':')[1];
-    const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
     console.log(`[CALLBACK] select_lead → selected: ${leadName}`);
     bot.session = bot.session || {};
     bot.session[chatId] = bot.session[chatId] || {};
@@ -123,6 +122,8 @@ bot.on('callback_query', async (query) => {
 
   } else if (action.startsWith('confirm_draft:')) {
   const draftId = action.split(':')[1];
+  const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
+
 
   // PARSE leadData FROM TEXT (Telegram message)
   const leadData = {};
