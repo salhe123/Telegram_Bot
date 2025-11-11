@@ -125,7 +125,7 @@ bot.on('callback_query', async (query) => {
 
   // PARSE leadData FROM TEXT (Telegram message)
   const leadData = {};
-  const lines = query.message.text.split('\n');
+  const lines = query.message.text.split('\n').filter(line => line.trim() !== ''); // ← FIXED
   for (const line of lines) {
     const match = line.match(/• \*(.+?):\* (.+)/);
     if (match) {
@@ -143,7 +143,7 @@ bot.on('callback_query', async (query) => {
     await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
       draftId,
       chatId,
-      leadData: JSON.stringify(leadData) 
+      leadData: JSON.stringify(leadData)  // ← NOW: {"first_name":"John"}
     });
 
     await bot.editMessageText('Waiting for CRM...', { 
@@ -151,6 +151,7 @@ bot.on('callback_query', async (query) => {
       message_id: query.message.message_id 
     });
   } catch (err) {
+    console.error('[ERROR]', err.message);
     await bot.editMessageText('Error.', { 
       chat_id: chatId, 
       message_id: query.message.message_id 
