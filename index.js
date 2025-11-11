@@ -117,18 +117,9 @@ bot.on('callback_query', async (query) => {
 
   } else if (action.startsWith('confirm_draft:')) {
   const draftId = action.split(':')[1];
-  const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
-
   const draftMessage = query.message;
-  if (!draftMessage?.text || !draftMessage.text.includes(`draftId: \`${draftId}\``)) {
-    await bot.editMessageText('Draft not found. Try again.', {
-      chat_id: chatId,
-      message_id: query.message.message_id
-    });
-    return;
-  }
 
-  // PARSE leadData FROM TEXT
+  // PARSE leadData FROM TEXT (you already have this)
   const text = draftMessage.text;
   const lines = text.split('\n').filter(l => l.includes(':') && l.includes('*'));
   const leadData = {};
@@ -142,10 +133,7 @@ bot.on('callback_query', async (query) => {
   });
 
   try {
-    await bot.editMessageText('Creating lead in CRM...', {
-      chat_id: chatId,
-      message_id: query.message.message_id
-    });
+    await bot.editMessageText('Creating lead...', { chat_id: chatId, message_id: query.message.message_id });
 
     await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
       draftId,
@@ -154,16 +142,9 @@ bot.on('callback_query', async (query) => {
       leadData: JSON.stringify(leadData)
     });
 
-    await bot.editMessageText('Waiting...!', {
-      chat_id: chatId,
-      message_id: query.message.message_id
-    });
+    await bot.editMessageText('Waiting for CRM...', { chat_id: chatId, message_id: query.message.message_id });
   } catch (err) {
-    console.error('Confirm error:', err.message);
-    await bot.editMessageText('Error creating lead. Try again.', {
-      chat_id: chatId,
-      message_id: query.message.message_id
-    });
+    await bot.editMessageText('Error.', { chat_id: chatId, message_id: query.message.message_id });
   }
 }else if (action === 'cancel_draft') {  // ← NO :
   console.log('[CALLBACK] cancel_draft → user cancelled');
