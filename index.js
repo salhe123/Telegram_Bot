@@ -99,9 +99,6 @@ bot.on('callback_query', async (query) => {
   const action = query.data;
   console.log(`[CALLBACK] chatId: ${chatId} | action: ${action}`);
 
-  bot.session = bot.session || {};
-  bot.session[chatId] = bot.session[chatId] || {};
-
   if (action === 'creat_lead') {
     console.log(`[CALLBACK] creat_lead → prompt voice`);
     await bot.sendMessage(chatId, 'Send a *voice message* with lead details.\nSet CRM with */setcrm <URL>* first.', { parse_mode: 'Markdown' });
@@ -112,39 +109,31 @@ bot.on('callback_query', async (query) => {
 
   } else if (action.startsWith('select_lead:')) {
     const leadName = action.split(':')[1];
+    bot.session = bot.session || {};
+    bot.session[chatId] = bot.session[chatId] || {};
     bot.session[chatId].selectedLead = leadName;
     console.log(`[CALLBACK] select_lead → saved: ${leadName}`);
     await bot.sendMessage(chatId, `Selected: *${leadName}*\n\nSend *voice* to update.`, { parse_mode: 'Markdown' });
 
   } else if (action.startsWith('confirm_draft:')) {
     const draftId = action.split(':')[1];
-    const crmBaseUrl = bot.session[chatId].crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
+    const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
     console.log(`[CALLBACK] confirm_draft → draftId: ${draftId}`);
 
     try {
       await bot.editMessageText('Creating lead...', { chat_id: chatId, message_id: query.message.message_id });
 
-      // Get leadData from session instead of message
-      const draft = bot.session[chatId].drafts?.[draftId];
-      if (!draft) {
-        console.log('[CALLBACK] Draft not found in session');
-        await bot.editMessageText('Draft not found. Try again.', { chat_id: chatId, message_id: query.message.message_id });
-        return bot.answerCallbackQuery(query.id);
-      }
-
-      const leadData = draft.draftData;
+      // Get leadData from n8n (sent as draftData in message)
+      const leadData = query.message.draftData ? JSON.parse(query.message.draftData) : {};
       console.log('[CALLBACK] confirm_draft → leadData:', leadData);
 
       await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
         draftId,
         chatId,
         crmBaseUrl,
-        leadData
+        leadData: JSON.stringify(leadData)
       });
-
-      // Clean up after sending
-      delete bot.session[chatId].drafts[draftId];
 
       await bot.editMessageText('Waiting for CRM...', { chat_id: chatId, message_id: query.message.message_id });
     } catch (err) {
@@ -253,7 +242,6 @@ bot.on('voice', async (msg) => {
 
   bot.session = bot.session || {};
   bot.session[chatId] = bot.session[chatId] || {};
-  bot.session[chatId].drafts = bot.session[chatId].drafts || {};
 
   try {
     await bot.sendMessage(chatId, 'Processing voice...');
@@ -283,22 +271,6 @@ bot.on('voice', async (msg) => {
     const webhookUrl = isUpdate ? process.env.N8N_VOICE_WEBHOOK_URL : process.env.N8N_VOICE_WEBHOOK_URL;
     console.log(`[VOICE] POST to n8n → ${webhookUrl}`);
     console.log('[VOICE] Payload:', JSON.stringify(payload, null, 2));
-
-    // Save a draft in session for confirmation
-    const draftId = `draft_${Date.now()}`;
-    bot.session[chatId].drafts[draftId] = {
-      draftData: payload
-    };
-
-    // Send a confirmation message with inline buttons
-    await bot.sendMessage(chatId, 'Draft ready. Confirm or cancel:', {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: 'Confirm', callback_data: `confirm_draft:${draftId}` }],
-          [{ text: 'Cancel', callback_data: `cancel_draft:${draftId}` }]
-        ]
-      }
-    });
 
     await axios.post(webhookUrl, payload);
     console.log('[VOICE] SUCCESS: sent to n8n');
