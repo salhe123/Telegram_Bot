@@ -122,8 +122,6 @@ bot.on('callback_query', async (query) => {
 
   } else if (action.startsWith('confirm_draft:')) {
   const draftId = action.split(':')[1];
-  const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
-
 
   // PARSE leadData FROM TEXT (Telegram message)
   const leadData = {};
@@ -146,7 +144,6 @@ bot.on('callback_query', async (query) => {
     await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
       draftId,
       chatId,
-      // crmBaseUrl,
       leadData: JSON.stringify(leadData) 
     });
 
