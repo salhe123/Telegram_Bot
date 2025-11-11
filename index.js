@@ -119,17 +119,34 @@ bot.on('callback_query', async (query) => {
   const draftId = action.split(':')[1];
   const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
-  console.log(`[CALLBACK] confirm_draft → draftId: ${draftId}`);
+  const draftMessage = query.message;
+  if (!draftMessage?.text || !draftMessage.text.includes(`draftId: \`${draftId}\``)) {
+    await bot.editMessageText('Draft not found. Try again.', {
+      chat_id: chatId,
+      message_id: query.message.message_id
+    });
+    return;
+  }
+
+  // PARSE leadData FROM TEXT
+  const text = draftMessage.text;
+  const lines = text.split('\n').filter(l => l.includes(':') && l.includes('*'));
+  const leadData = {};
+  lines.forEach(line => {
+    const match = line.match(/• \*(.+?):\* (.+)/);
+    if (match) {
+      const key = match[1].trim().toLowerCase().replace(/ /g, '_');
+      const value = match[2].trim();
+      leadData[key] = value;
+    }
+  });
 
   try {
-    await bot.editMessageText('Creating lead...', { chat_id: chatId, message_id: query.message.message_id });
+    await bot.editMessageText('Creating lead in CRM...', {
+      chat_id: chatId,
+      message_id: query.message.message_id
+    });
 
-    // EXTRACT leadData FROM MESSAGE TEXT
-    const text = query.message.text;
-    const dataMatch = text.match(/<!--DATA:({.*?})-->/);
-    const leadData = dataMatch ? JSON.parse(dataMatch[1]) : {};
-
-    // SEND TO CONFIRM WEBHOOK
     await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
       draftId,
       chatId,
@@ -137,11 +154,20 @@ bot.on('callback_query', async (query) => {
       leadData: JSON.stringify(leadData)
     });
 
-    await bot.editMessageText('Waiting for CRM...', { chat_id: chatId, message_id: query.message.message_id });
+    await bot.editMessageText('Waiting...!', {
+      chat_id: chatId,
+      message_id: query.message.message_id
+    });
   } catch (err) {
-    console.error('[CALLBACK] ERROR:', err.message);
-    await bot.editMessageText('Error. Try again.', { chat_id: chatId, message_id: query.message.message_id });
+    console.error('Confirm error:', err.message);
+    await bot.editMessageText('Error creating lead. Try again.', {
+      chat_id: chatId,
+      message_id: query.message.message_id
+    });
   }
+}else if (action === 'cancel_draft') {  // ← NO :
+  console.log('[CALLBACK] cancel_draft → user cancelled');
+  await bot.editMessageText('Cancelled.', { chat_id: chatId, message_id: query.message.message_id });
 }
 
   bot.answerCallbackQuery(query.id);
