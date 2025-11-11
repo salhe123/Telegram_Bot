@@ -93,14 +93,7 @@ Need help? Just type /help!
   `, { parse_mode: 'Markdown' });
 });
 
-// Add route in Express
-app.post('/save-draft', (req, res) => {
-  const { draftId, chatId, crmBaseUrl } = req.body;
-  bot.session = bot.session || {};
-  bot.session[draftId] = { chatId, crmBaseUrl };
-  console.log('[SAVE DRAFT]', { draftId, chatId, crmBaseUrl });
-  res.sendStatus(200);
-});
+
 
 // === CALLBACKS ===
 bot.on('callback_query', async (query) => {
@@ -126,38 +119,41 @@ bot.on('callback_query', async (query) => {
 
   } else if (action.startsWith('confirm_draft:')) {
   const draftId = action.split(':')[1];
-  const session = bot.session?.[draftId];
 
-  if (!session) {
-    return bot.editMessageText('Draft expired.', { chat_id: chatId, message_id: query.message.message_id });
-  }
-
-  const { crmBaseUrl, chatId: savedChatId } = session;
-
-  // Parse leadData from text
+  // Parse leadData from message text
   const leadData = {};
   query.message.text.split('\n')
     .filter(l => l.includes('*') && l.includes(':'))
     .forEach(line => {
       const match = line.match(/• \*(.+?):\* (.+)/);
       if (match) {
-        leadData[match[1].trim().toLowerCase().replace(/ /g, '_')] = match[2].trim();
+        const key = match[1].trim().toLowerCase().replace(/ /g, '_');
+        leadData[key] = match[2].trim();
       }
     });
 
   try {
-    await bot.editMessageText('Creating lead...', { chat_id: savedChatId, message_id: query.message.message_id });
+    await bot.editMessageText('Creating lead...', { 
+      chat_id: chatId, 
+      message_id: query.message.message_id 
+    });
 
     await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
       draftId,
-      chatId: savedChatId,
-      crmBaseUrl,
+      chatId,
       leadData: JSON.stringify(leadData)
     });
 
-    await bot.editMessageText('Waiting for CRM...', { chat_id: savedChatId, message_id: query.message.message_id });
+    await bot.editMessageText('Waiting for CRM...', { 
+      chat_id: chatId, 
+      message_id: query.message.message_id 
+    });
   } catch (err) {
-    await bot.editMessageText('Error.', { chat_id: savedChatId, message_id: query.message.message_id });
+    console.error('[CONFIRM] ERROR:', err.response?.data || err.message);
+    await bot.editMessageText('Error.', { 
+      chat_id: chatId, 
+      message_id: query.message.message_id 
+    });
   }
 } else if (action === 'cancel_draft') {  // ← NO :
   console.log('[CALLBACK] cancel_draft → user cancelled');
