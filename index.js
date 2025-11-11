@@ -144,6 +144,7 @@ bot.on('callback_query', async (query) => {
 
     await bot.editMessageText('Waiting for CRM...', { chat_id: chatId, message_id: query.message.message_id });
   } catch (err) {
+    console.log("the webhook url is ", process.env.N8N_CONFIRM_WEBHOOK_URL);
     await bot.editMessageText('Error.', { chat_id: chatId, message_id: query.message.message_id });
   }
 }else if (action === 'cancel_draft') {  // ← NO :
