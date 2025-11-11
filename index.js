@@ -151,6 +151,7 @@ bot.on('callback_query', async (query) => {
   await bot.editMessageText('Cancelled.', { chat_id: chatId, message_id: query.message.message_id });
 }
 
+
   bot.answerCallbackQuery(query.id);
 });
 
