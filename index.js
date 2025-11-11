@@ -120,17 +120,16 @@ bot.on('callback_query', async (query) => {
   } else if (action.startsWith('confirm_draft:')) {
   const draftId = action.split(':')[1];
 
-  // Parse leadData from message text
+  // PARSE leadData FROM TEXT (Telegram message)
   const leadData = {};
-  query.message.text.split('\n')
-    .filter(l => l.includes('*') && l.includes(':'))
-    .forEach(line => {
-      const match = line.match(/• \*(.+?):\* (.+)/);
-      if (match) {
-        const key = match[1].trim().toLowerCase().replace(/ /g, '_');
-        leadData[key] = match[2].trim();
-      }
-    });
+  const lines = query.message.text.split('\n');
+  for (const line of lines) {
+    const match = line.match(/• \*(.+?):\* (.+)/);
+    if (match) {
+      const key = match[1].trim().toLowerCase().replace(/ /g, '_');
+      leadData[key] = match[2].trim();
+    }
+  }
 
   try {
     await bot.editMessageText('Creating lead...', { 
@@ -141,7 +140,7 @@ bot.on('callback_query', async (query) => {
     await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
       draftId,
       chatId,
-      leadData: JSON.stringify(leadData)
+      leadData: JSON.stringify(leadData)  // ← NOW HAS DATA
     });
 
     await bot.editMessageText('Waiting for CRM...', { 
@@ -149,7 +148,6 @@ bot.on('callback_query', async (query) => {
       message_id: query.message.message_id 
     });
   } catch (err) {
-    console.error('[CONFIRM] ERROR:', err.response?.data || err.message);
     await bot.editMessageText('Error.', { 
       chat_id: chatId, 
       message_id: query.message.message_id 
