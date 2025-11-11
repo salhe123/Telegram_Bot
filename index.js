@@ -124,8 +124,9 @@ bot.on('callback_query', async (query) => {
   const draftId = action.split(':')[1];
 
   // PARSE leadData FROM TEXT (Telegram message)
-  const leadData = {};
   const lines = query.message.text.split('\n').filter(line => line.trim() !== '');
+  const leadData = lines;
+
   console.log("[CALLBACK] confirm_draft → parsing lead data from message", lines);
   for (const line of lines) {
     const match = line.match(/• \*(.+?):\* (.+)/);
@@ -158,7 +159,7 @@ bot.on('callback_query', async (query) => {
       message_id: query.message.message_id 
     });
   }
-} else if (action === 'cancel_draft') {  // ← NO :
+} else if (action === 'cancel_draft') {  
   console.log('[CALLBACK] cancel_draft → user cancelled');
   await bot.editMessageText('Cancelled.', { chat_id: chatId, message_id: query.message.message_id });
 }
