@@ -122,13 +122,16 @@ bot.on('callback_query', async (query) => {
 
   } else if (action.startsWith('confirm_draft:')) {
   const draftId = action.split(':')[1];
+  const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
-  // PARSE leadData FROM TEXT (Telegram message)
   const leadData = {};
-  const lines = query.message.text.split('\n').filter(line => line.trim() !== '');
+  const lines = query.message.text.split('\n').filter(l => l.trim() !== '');
   console.log("[CALLBACK] confirm_draft → parsing lead data from message", lines);
+
   for (const line of lines) {
-    const match = line.match(/• \*(.+?):\* (.+)/);
+    // Strip **bold** markers first
+    const clean = line.replace(/\*/g, '').trim();
+    const match = clean.match(/• (.+?): (.+)/);
     if (match) {
       const key = match[1].trim().toLowerCase().replace(/ /g, '_');
       leadData[key] = match[2].trim();
@@ -136,30 +139,30 @@ bot.on('callback_query', async (query) => {
   }
 
   try {
-    await bot.editMessageText('Creating lead...', { 
-      chat_id: chatId, 
-      message_id: query.message.message_id 
+    await bot.editMessageText('Creating lead...', {
+      chat_id: chatId,
+      message_id: query.message.message_id
     });
 
     await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
       draftId,
       chatId,
-      crmBaseUrl: bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL,  // ← ADD THIS
-      leadData: JSON.stringify(leadData) 
+      crmBaseUrl,
+      leadData: JSON.stringify(leadData)
     });
 
-    await bot.editMessageText('Waiting for CRM...', { 
-      chat_id: chatId, 
-      message_id: query.message.message_id 
+    await bot.editMessageText('Waiting for CRM...', {
+      chat_id: chatId,
+      message_id: query.message.message_id
     });
   } catch (err) {
     console.error('[ERROR]', err.message);
-    await bot.editMessageText('Error.', { 
-      chat_id: chatId, 
-      message_id: query.message.message_id 
+    await bot.editMessageText('Error.', {
+      chat_id: chatId,
+      message_id: query.message.message_id
     });
   }
-} else if (action === 'cancel_draft') {  
+} else if (action === 'cancel_draft') {
   console.log('[CALLBACK] cancel_draft → user cancelled');
   await bot.editMessageText('Cancelled.', { chat_id: chatId, message_id: query.message.message_id });
 }
