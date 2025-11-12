@@ -205,7 +205,12 @@ bot.onText(/\/updatelead (.+)/, async (msg, match) => {
     return bot.sendMessage(chatId, 'Set CRM first: */setcrm <URL>*', { parse_mode: 'Markdown' });
   }
 
-  // === NEW: Parse filter: part ===
+  // === FIX: Initialize session safely ===
+  bot.session = bot.session || {};
+  bot.session[chatId] = bot.session[chatId] || {};
+  bot.session[chatId].search = bot.session[chatId].search || { query: '', page: 1, filters: {} };
+
+  // === Parse filter: part ===
   let query = input;
   let filters = {};
   if (input.includes('filter:')) {
@@ -218,8 +223,7 @@ bot.onText(/\/updatelead (.+)/, async (msg, match) => {
     });
   }
 
-  // === NEW: Use session state ===
-  bot.session[chatId].search = bot.session[chatId].search || { query: '', page: 1, filters: {} };
+  // === Use session state ===
   bot.session[chatId].search.query = query;
   bot.session[chatId].search.filters = filters;
   const page = bot.session[chatId].search.page;
