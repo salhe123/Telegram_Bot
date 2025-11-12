@@ -144,7 +144,8 @@ bot.on('callback_query', async (query) => {
     await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
       draftId,
       chatId,
-      leadData 
+      crmBaseUrl: bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL,  // ← ADD THIS
+      leadData: JSON.stringify(leadData) 
     });
 
     await bot.editMessageText('Waiting for CRM...', { 
