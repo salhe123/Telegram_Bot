@@ -1,0 +1,47 @@
+# Node dependencies
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+debug.log
+
+# Build output
+dist/
+build/
+out/
+.next/
+.cache/
+.vite/
+public/*.map
+*.tgz
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Editor directories and files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Package manager artifacts
+.pnp.*
+.pnp.js
+
+# Misc
+*.log
+*.lock (optional)
+coverage-report/

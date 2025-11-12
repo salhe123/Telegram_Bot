@@ -1,0 +1,190 @@
+{
+  "name": "CONFIRM_LEAD",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "CONFIRM_LEAD",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -656,
+        272
+      ],
+      "id": "4fd0a7ce-3194-4c7e-9016-c4109180b761",
+      "name": "Wait for Confirmation1",
+      "webhookId": "f69f5152-6e49-41f0-a5a2-9424e8e4310e"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ ($json.leadData.first_name || '').trim() }}",
+        "rules": {
+          "rules": [
+            {
+              "operation": "=equal",
+              "value2": "={{ '' }}",
+              "output": 1
+            },
+            {
+              "operation": "notEqual",
+              "value2": "={{ '' }}"
+            }
+          ]
+        }
+      },
+      "name": "Check Mandatory Fields1",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        240
+      ],
+      "id": "dc79b0d1-a97c-4b93-b8c1-c8a80997194a"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"chat_id\": {{$json.chatId}},\n  \"text\": \"Please provide your *First Name* to create the lead it is mandatory so Record again please!\"\n}"
+      },
+      "name": "Prompt User1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        16,
+        368
+      ],
+      "id": "a600b3fa-0ec0-4a4a-a968-174d63880998"
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "POST",
+        "url": "={{ $json.crmBaseUrl }}/api/resource/CRM%20Lead",
+        "jsonParameters": true,
+        "options": {
+          "fullResponse": true
+        },
+        "bodyParametersJson": "={{ $json.leadData }}"
+      },
+      "name": "Create Lead1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        16,
+        176
+      ],
+      "id": "4af39f04-87f4-4735-ab7c-feb9c1c379d8",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "QMLdwQmE0rzxBFFH",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"chat_id\": \"{{ $('Wait for Confirmation1').item.json.body.chatId }}\",\n  \"text\": \"Lead created! View here: {{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}/app/lead/{{ $('Create Lead1').item.json.body.data.name || 'unknown' }}\",\n  \"parse_mode\": \"Markdown\"\n}"
+      },
+      "name": "Send CRM Link1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        240,
+        176
+      ],
+      "id": "e8ee4517-5368-4cbf-96cf-4861345dd99a"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Code Node after Wait for Confirmation1\nconst text = $json.body.leadData;\nlet leadData = {};\n\nif (Array.isArray(text)) {\n  // Parse from message lines\n  text.forEach(line => {\n    const match = line.match(/• \\*(.+?):\\* (.+)/);\n    if (match) {\n      const key = match[1].trim().toLowerCase().replace(/ /g, '_');\n      leadData[key] = match[2].trim();\n    }\n  });\n} else if (typeof text === 'string') {\n  try {\n    leadData = JSON.parse(text);\n  } catch {}\n}\n\nreturn {\n  json: {\n    draftId: $json.body.draftId,\n    chatId: $json.body.chatId,\n    crmBaseUrl: $json.body.crmBaseUrl,   // Added\n    leadData\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        272
+      ],
+      "id": "f2c00e56-f804-44c0-8f37-a9a0684b59e9",
+      "name": "leadData"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Wait for Confirmation1": {
+      "main": [
+        [
+          {
+            "node": "leadData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Mandatory Fields1": {
+      "main": [
+        [
+          {
+            "node": "Create Lead1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prompt User1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Lead1": {
+      "main": [
+        [
+          {
+            "node": "Send CRM Link1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "leadData": {
+      "main": [
+        [
+          {
+            "node": "Check Mandatory Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c8277b1a-26ef-42cc-97c5-0281d0bf4c28",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ff704f4173ec39b158b66f039a9d69a1a97429263ff20f475877150f83b88720"
+  },
+  "id": "PFF9KcfBqLKR0WXW",
+  "tags": []
+}
