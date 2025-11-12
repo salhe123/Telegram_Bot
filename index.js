@@ -1,5 +1,3 @@
-//v-2
-
 require('dotenv').config();
 const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
@@ -95,7 +93,7 @@ Need help? Just type /help!
   `, { parse_mode: 'Markdown' });
 });
 
-// === SESSION INIT (ONLY ADDED) ===
+// === SESSION INIT ===
 bot.session = bot.session || {};
 
 // === CALLBACKS ===
@@ -104,7 +102,6 @@ bot.on('callback_query', async (query) => {
   const action = query.data;
   console.log(`[CALLBACK] chatId: ${chatId} | action: ${action}`);
 
-  // Session per chat
   bot.session[chatId] = bot.session[chatId] || {};
   bot.session[chatId].search = bot.session[chatId].search || { query: '', page: 1, filters: {} };
 
@@ -168,7 +165,7 @@ bot.on('callback_query', async (query) => {
     console.log('[CALLBACK] cancel_draft to user cancelled');
     await bot.editMessageText('Cancelled.', { chat_id: chatId, message_id: query.message.message_id });
 
-  // === MORE / FILTER / PREV (ONLY ADDED) ===
+  // === More / Previous / Filter ===
   } else if (action === 'more') {
     bot.session[chatId].search.page += 1;
     bot.answerCallbackQuery(query.id);
@@ -200,30 +197,45 @@ bot.onText(/\/setcrm (.+)/, (msg, match) => {
   bot.sendMessage(chatId, `CRM set to: \`${url}\``, { parse_mode: 'Markdown' });
 });
 
-// === runSearch() FUNCTION (ONLY ADDED) ===
+// === runSearch() FUNCTION ===
 async function runSearch(chatId, input) {
   const crmBaseUrl = bot.session[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
   if (!crmBaseUrl) return bot.sendMessage(chatId, 'Set CRM first: */setcrm <URL>*', { parse_mode: 'Markdown' });
 
-  let query = input;
-  let filters = {};
-  if (input.includes('filter:')) {
-    const parts = input.split('filter:');
-    query = parts[0].trim();
-    const filterStr = parts[1].trim();
-    filterStr.split(',').forEach(pair => {
-      const [k, v] = pair.split(':').map(s => s.trim());
-      if (k && v) filters[k] = v;
-    });
+  // === ONLY UPDATE query/filters if input is provided (from /search) ===
+  if (input) {
+    let query = input;
+    let filters = {};
+
+    if (input.includes('filter:')) {
+      const parts = input.split('filter:');
+      query = parts[0].trim();
+      const filterStr = parts[1].trim();
+      filterStr.split(',').forEach(pair => {
+        const [k, v] = pair.split(':').map(s => s.trim());
+        if (k && v) filters[k] = v;
+      });
+    }
+
+    // Only update session if new search
+    bot.session[chatId].search.query = query;
+    bot.session[chatId].search.filters = filters;
+    bot.session[chatId].search.page = 1; // Reset page on new search
   }
 
-  bot.session[chatId].search.query = query;
-  bot.session[chatId].search.filters = filters;
-  const page = bot.session[chatId].search.page;
+  // === Use stored query/filters/page ===
+  const query = bot.session[chatId].search.query || '';
+  const filters = bot.session[chatId].search.filters || {};
+  const page = bot.session[chatId].search.page || 1;
   const start = (page - 1) * 5;
 
+  if (!query) {
+    return bot.sendMessage(chatId, 'Use `/search <term>` first.');
+  }
+
   try {
-    console.log('[SEARCH] Calling Frappe API...');
+    console.log('[SEARCH] Query:', query, 'Filters:', filters, 'Page:', page);
+
     const filtersArray = [["organization", "like", `%${query}%`]];
     if (filters.owner) filtersArray.push(["owner", "=", filters.owner]);
     if (filters.status) filtersArray.push(["status", "=", filters.status]);
@@ -249,7 +261,7 @@ async function runSearch(chatId, input) {
     });
 
     const seen = new Set();
-    const combined = [...orgRes.data.data, ...nameRes.data.data]
+    const combined = [...(orgRes.data.data || []), ...(nameRes.data.data || [])]
       .filter(l => { if (seen.has(l.name)) return false; seen.add(l.name); return true; })
       .slice(0, 5);
 
@@ -277,18 +289,18 @@ async function runSearch(chatId, input) {
 
   } catch (err) {
     console.error('[SEARCH] ERROR:', err.response?.data || err.message);
-    bot.sendMessage(chatId, 'Search failed. Check CRM URL.');
+    bot.sendMessage(chatId, 'Search failed. Check CRM URL or API key.');
   }
 }
 
-// === /search (MODIFIED TO USE runSearch) ===
+// === /search (uses runSearch) ===
 bot.onText(/\/search (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const input = match[1].trim();
-  console.log(`[COMMAND /search] chatId: ${chatId} | input: "${input}"`);
 
   bot.session[chatId] = bot.session[chatId] || {};
   bot.session[chatId].search = bot.session[chatId].search || { query: '', page: 1, filters: {} };
+  bot.session[chatId].search.page = 1; // ← ADD THIS
 
   await runSearch(chatId, input);
 });
