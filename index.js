@@ -80,8 +80,8 @@ to \`/setcrm https://your-crm.fr8labs.co\`
 *2. Create Lead*  
 to Send voice to Confirm draft
 
-*3. Update Lead*  
-to Type: \`/updatelead Acme\` to See top 5 results
+*3. Search Lead*  
+to Type: \`/search Acme\` to See top 5 results and select and update
 
 *4. Search Tips*  
 to Use org name, contact name, or lead ID
@@ -111,8 +111,8 @@ bot.on('callback_query', async (query) => {
     await bot.sendMessage(chatId, 'Send a *voice message* with lead details.\nSet CRM with */setcrm <URL>* first.', { parse_mode: 'Markdown' });
 
   } else if (action === 'update_lead') {
-    console.log(`[CALLBACK] update_lead to prompt /updatelead`);
-    await bot.sendMessage(chatId, 'Type: `/updatelead Acme` or `/updatelead John`', { parse_mode: 'Markdown' });
+    console.log(`[CALLBACK] update_lead to prompt /search`);
+    await bot.sendMessage(chatId, 'Type: `/search Acme` or `/search John`', { parse_mode: 'Markdown' });
 
   } else if (action.startsWith('select_lead:')) {
     const leadName = action.split(':')[1];
@@ -181,7 +181,7 @@ bot.on('callback_query', async (query) => {
 
   } else if (action === 'filter') {
     bot.answerCallbackQuery(query.id);
-    await bot.sendMessage(chatId, 'Filter by:\n`owner:glenn`\n`status:Open`\n\nSend: `/updatelead Test filter:owner:glenn,status:Open`', { parse_mode: 'Markdown' });
+    await bot.sendMessage(chatId, 'Filter by:\n`owner:glenn`\n`status:Open`\n\nSend: `/search Test filter:owner:glenn,status:Open`', { parse_mode: 'Markdown' });
 
   }
 
@@ -279,11 +279,11 @@ async function runSearch(chatId, input) {
   }
 }
 
-// === /updatelead SEARCH (MODIFIED TO USE runSearch) ===
-bot.onText(/\/updatelead (.+)/, async (msg, match) => {
+// === /search (MODIFIED TO USE runSearch) ===
+bot.onText(/\/search (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const input = match[1].trim();
-  console.log(`[COMMAND /updatelead] chatId: ${chatId} | input: "${input}"`);
+  console.log(`[COMMAND /search] chatId: ${chatId} | input: "${input}"`);
 
   bot.session[chatId] = bot.session[chatId] || {};
   bot.session[chatId].search = bot.session[chatId].search || { query: '', page: 1, filters: {} };
