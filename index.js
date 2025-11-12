@@ -3,7 +3,6 @@ const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
-
 const app = express();
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
 
@@ -45,13 +44,13 @@ app.get('/health', (req, res) => {
       n8n_confirm: !!process.env.N8N_CONFIRM_WEBHOOK_URL
     }
   };
-  console.log('[HEALTH] GET /health → 200');
+  console.log('[HEALTH] GET /health to 200');
   res.json(health);
 });
 
 // === ROOT ROUTE ===
 app.get('/', (req, res) => {
-  console.log('[ROOT] GET / → 200');
+  console.log('[ROOT] GET / to 200');
   res.send('Frappe Lead Bot is running');
 });
 
@@ -76,26 +75,23 @@ bot.onText(/\/help/, (msg) => {
 *Frappe Lead Bot – Quick Help*
 
 *1. Set your CRM*  
-→ \`/setcrm https://your-crm.fr8labs.co\`
+to \`/setcrm https://your-crm.fr8labs.co\`
 
 *2. Create Lead*  
-→ Send voice → Confirm draft
+to Send voice to Confirm draft
 
 *3. Update Lead*  
-→ Type: \`/updatelead Acme\` → See top 5 results
+to Type: \`/updatelead Acme\` to See top 5 results
 
 *4. Search Tips*  
-→ Use org name, contact name, or lead ID
+to Use org name, contact name, or lead ID
 
 *5. Health Check*  
-→ \`/health\` or visit: \`${process.env.RENDER_EXTERNAL_URL || 'https://your-bot.onrender.com'}/health\`
+to \`/health\` or visit: \`${process.env.RENDER_EXTERNAL_URL || 'https://your-bot.onrender.com'}/health\`
 
 Need help? Just type /help!
   `, { parse_mode: 'Markdown' });
 });
-
-
-
 
 // === CALLBACKS ===
 bot.on('callback_query', async (query) => {
@@ -103,70 +99,89 @@ bot.on('callback_query', async (query) => {
   const action = query.data;
   console.log(`[CALLBACK] chatId: ${chatId} | action: ${action}`);
 
+  // === Session init ===
+  bot.session = bot.session || {};
+  bot.session[chatId] = bot.session[chatId] || {};
+  bot.session[chatId].search = bot.session[chatId].search || { query: '', page: 1, filters: {} };
+
   if (action === 'creat_lead') {
-    console.log(`[CALLBACK] creat_lead → prompt voice`);
+    console.log(`[CALLBACK] creat_lead to prompt voice`);
     await bot.sendMessage(chatId, 'Send a *voice message* with lead details.\nSet CRM with */setcrm <URL>* first.', { parse_mode: 'Markdown' });
 
   } else if (action === 'update_lead') {
-    console.log(`[CALLBACK] update_lead → prompt /updatelead`);
+    console.log(`[CALLBACK] update_lead to prompt /updatelead`);
     await bot.sendMessage(chatId, 'Type: `/updatelead Acme` or `/updatelead John`', { parse_mode: 'Markdown' });
 
   } else if (action.startsWith('select_lead:')) {
     const leadName = action.split(':')[1];
-    console.log(`[CALLBACK] select_lead → selected: ${leadName}`);
-    bot.session = bot.session || {};
-    bot.session[chatId] = bot.session[chatId] || {};
+    console.log(`[CALLBACK] select_lead to selected: ${leadName}`);
     bot.session[chatId].selectedLead = leadName;
-    console.log(`[CALLBACK] select_lead → saved: ${leadName}`);
+    console.log(`[CALLBACK] select_lead to saved: ${leadName}`);
     await bot.sendMessage(chatId, `Selected: *${leadName}*\n\nSend *voice* to update.`, { parse_mode: 'Markdown' });
 
   } else if (action.startsWith('confirm_draft:')) {
-  const draftId = action.split(':')[1];
-  const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
+    const draftId = action.split(':')[1];
+    const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
 
-  const leadData = {};
-  const lines = query.message.text.split('\n').filter(l => l.trim() !== '');
-  console.log("[CALLBACK] confirm_draft → parsing lead data from message", lines);
+    const leadData = {};
+    const lines = query.message.text.split('\n').filter(l => l.trim() !== '');
+    console.log("[CALLBACK] confirm_draft to parsing lead data from message", lines);
 
-  for (const line of lines) {
-    // Strip **bold** markers first
-    const clean = line.replace(/\*/g, '').trim();
-    const match = clean.match(/• (.+?): (.+)/);
-    if (match) {
-      const key = match[1].trim().toLowerCase().replace(/ /g, '_');
-      leadData[key] = match[2].trim();
+    for (const line of lines) {
+      const clean = line.replace(/\*/g, '').trim();
+      const match = clean.match(/• (.+?): (.+)/);
+      if (match) {
+        const key = match[1].trim().toLowerCase().replace(/ /g, '_');
+        leadData[key] = match[2].trim();
+      }
     }
+
+    try {
+      await bot.editMessageText('Creating lead...', {
+        chat_id: chatId,
+        message_id: query.message.message_id
+      });
+
+      await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
+        draftId,
+        chatId,
+        crmBaseUrl,
+        leadData: JSON.stringify(leadData)
+      });
+
+      await bot.editMessageText('Waiting for CRM...', {
+        chat_id: chatId,
+        message_id: query.message.message_id
+      });
+    } catch (err) {
+      console.error('[ERROR]', err.message);
+      await bot.editMessageText('Error.', {
+        chat_id: chatId,
+        message_id: query.message.message_id
+      });
+    }
+  } else if (action === 'cancel_draft') {
+    console.log('[CALLBACK] cancel_draft to user cancelled');
+    await bot.editMessageText('Cancelled.', { chat_id: chatId, message_id: query.message.message_id });
+
+  // === More / Previous / Filter ===
+  } else if (action === 'more') {
+    bot.session[chatId].search.page += 1;
+    bot.answerCallbackQuery(query.id);
+    await runSearch(chatId, bot.session[chatId].search.query);
+
+  } else if (action === 'prev') {
+    if (bot.session[chatId].search.page > 1) {
+      bot.session[chatId].search.page -= 1;
+      bot.answerCallbackQuery(query.id);
+      await runSearch(chatId, bot.session[chatId].search.query);
+    }
+
+  } else if (action === 'filter') {
+    bot.answerCallbackQuery(query.id);
+    await bot.sendMessage(chatId, 'Filter by:\n`owner:glenn`\n`status:Open`\n\nSend: `/updatelead Test filter:owner:glenn,status:Open`', { parse_mode: 'Markdown' });
+
   }
-
-  try {
-    await bot.editMessageText('Creating lead...', {
-      chat_id: chatId,
-      message_id: query.message.message_id
-    });
-
-    await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
-      draftId,
-      chatId,
-      crmBaseUrl,
-      leadData: JSON.stringify(leadData)
-    });
-
-    await bot.editMessageText('Waiting for CRM...', {
-      chat_id: chatId,
-      message_id: query.message.message_id
-    });
-  } catch (err) {
-    console.error('[ERROR]', err.message);
-    await bot.editMessageText('Error.', {
-      chat_id: chatId,
-      message_id: query.message.message_id
-    });
-  }
-} else if (action === 'cancel_draft') {
-  console.log('[CALLBACK] cancel_draft → user cancelled');
-  await bot.editMessageText('Cancelled.', { chat_id: chatId, message_id: query.message.message_id });
-}
-
 
   bot.answerCallbackQuery(query.id);
 });
@@ -178,30 +193,44 @@ bot.onText(/\/setcrm (.+)/, (msg, match) => {
   bot.session = bot.session || {};
   bot.session[chatId] = bot.session[chatId] || {};
   bot.session[chatId].crmBaseUrl = url;
-  console.log(`[COMMAND /setcrm] chatId: ${chatId} → CRM: ${url}`);
+  console.log(`[COMMAND /setcrm] chatId: ${chatId} to CRM: ${url}`);
   bot.sendMessage(chatId, `CRM set to: \`${url}\``, { parse_mode: 'Markdown' });
 });
 
-// === /updatelead SEARCH ===
-bot.onText(/\/updatelead (.+)/, async (msg, match) => {
-  const chatId = msg.chat.id;
-  const query = match[1].trim();
+// === Extracted Search Function (supports pagination + filter) ===
+async function runSearch(chatId, input) {
   const crmBaseUrl = bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
+  if (!crmBaseUrl) return bot.sendMessage(chatId, 'Set CRM first: */setcrm <URL>*', { parse_mode: 'Markdown' });
 
-  console.log(`[COMMAND /updatelead] chatId: ${chatId} | query: "${query}" | crm: ${crmBaseUrl}`);
-
-  if (!crmBaseUrl) {
-    console.log('[ERROR] /updatelead → CRM not set');
-    return bot.sendMessage(chatId, 'Set CRM first: */setcrm <URL>*', { parse_mode: 'Markdown' });
+  let query = input;
+  let filters = {};
+  if (input.includes('filter:')) {
+    const parts = input.split('filter:');
+    query = parts[0].trim();
+    const filterStr = parts[1].trim();
+    filterStr.split(',').forEach(pair => {
+      const [k, v] = pair.split(':').map(s => s.trim());
+      if (k && v) filters[k] = v;
+    });
   }
 
+  bot.session[chatId].search.query = query;
+  bot.session[chatId].search.filters = filters;
+  const page = bot.session[chatId].search.page;
+  const start = (page - 1) * 5;
+
   try {
-    console.log('[SEARCH] Calling Frappe API (org + name)...');
+    console.log('[SEARCH] Calling Frappe API...');
+    const filtersArray = [["organization", "like", `%${query}%`]];
+    if (filters.owner) filtersArray.push(["owner", "=", filters.owner]);
+    if (filters.status) filtersArray.push(["status", "=", filters.status]);
+
     const orgRes = await axios.get(`${crmBaseUrl}/api/resource/CRM Lead`, {
       params: {
-        filters: JSON.stringify([["organization", "like", `%${query}%`]]),
+        filters: JSON.stringify(filtersArray),
         fields: JSON.stringify(["name", "organization", "first_name", "last_name", "status", "owner", "modified"]),
-        limit_page_length: 5
+        limit_page_length: 5,
+        limit_start: start
       },
       headers: { 'Authorization': `token ${process.env.FRAPPE_API_KEY}:${process.env.FRAPPE_SECRET_KEY}` }
     });
@@ -210,41 +239,35 @@ bot.onText(/\/updatelead (.+)/, async (msg, match) => {
       params: {
         filters: JSON.stringify([["first_name", "like", `%${query}%`]]),
         fields: JSON.stringify(["name", "organization", "first_name", "last_name", "status", "owner", "modified"]),
-        limit_page_length: 5
+        limit_page_length: 5,
+        limit_start: start
       },
       headers: { 'Authorization': `token ${process.env.FRAPPE_API_KEY}:${process.env.FRAPPE_SECRET_KEY}` }
     });
 
     const seen = new Set();
     const combined = [...orgRes.data.data, ...nameRes.data.data]
-      .filter(l => {
-        if (seen.has(l.name)) return false;
-        seen.add(l.name);
-        return true;
-      })
+      .filter(l => { if (seen.has(l.name)) return false; seen.add(l.name); return true; })
       .slice(0, 5);
 
-    console.log('[SEARCH] Found leads:', combined.map(l => l.name).join(', ') || 'none');
-
     if (!combined.length) {
-      console.log('[SEARCH] No results');
       return bot.sendMessage(chatId, `No leads found for "${query}"`);
     }
 
     const lines = combined.map((l, i) => {
       const name = [l.first_name, l.last_name].filter(Boolean).join(' ') || '—';
-      return `*[${i+1}] ${l.name}* | ${l.organization || '—'} — ${name} | ${l.status || '—'} | Owner: ${l.owner || '—'} | ${l.modified.split(' ')[0]}`;
+      return `*[${i+1 + start}] ${l.name}* | ${l.organization || '—'} — ${name} | ${l.status || '—'} | Owner: ${l.owner || '—'} | ${l.modified.split(' ')[0]}`;
     }).join('\n\n');
 
-    const keyboard = combined.map((_, i) => [{ text: `${i+1}`, callback_data: `select_lead:${combined[i].name}` }]);
-    keyboard.push([
-      { text: 'More', callback_data: 'more' },
-      { text: 'Filter', callback_data: 'filter' },
-      { text: 'Create new', callback_data: 'creat_lead' }
-    ]);
+    const keyboard = combined.map((_, i) => [{ text: `${i+1 + start}`, callback_data: `select_lead:${combined[i].name}` }]);
+    const nav = [];
+    if (page > 1) nav.push({ text: 'Previous', callback_data: 'prev' });
+    if (combined.length === 5) nav.push({ text: 'More', callback_data: 'more' });
+    nav.push({ text: 'Filter', callback_data: 'filter' });
+    nav.push({ text: 'Create new', callback_data: 'creat_lead' });
+    keyboard.push(nav);
 
-    console.log('[SEARCH] Sending results to user');
-    await bot.sendMessage(chatId, `Found ${combined.length} leads:\n\n${lines}`, {
+    await bot.sendMessage(chatId, `Page ${page} | Found ${combined.length} leads:\n\n${lines}`, {
       parse_mode: 'Markdown',
       reply_markup: { inline_keyboard: keyboard }
     });
@@ -253,6 +276,19 @@ bot.onText(/\/updatelead (.+)/, async (msg, match) => {
     console.error('[SEARCH] ERROR:', err.response?.data || err.message);
     bot.sendMessage(chatId, 'Search failed. Check CRM URL.');
   }
+}
+
+// === /updatelead SEARCH (uses runSearch) ===
+bot.onText(/\/updatelead (.+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const input = match[1].trim();
+  console.log(`[COMMAND /updatelead] chatId: ${chatId} | input: "${input}"`);
+
+  bot.session = bot.session || {};
+  bot.session[chatId] = bot.session[chatId] || {};
+  bot.session[chatId].search = bot.session[chatId].search || { query: '', page: 1, filters: {} };
+
+  await runSearch(chatId, input);
 });
 
 // === VOICE HANDLER ===
@@ -285,13 +321,13 @@ bot.on('voice', async (msg) => {
       payload.leadName = bot.session[chatId].selectedLead;
       payload.isUpdate = true;
       delete bot.session[chatId].selectedLead;
-      console.log(`[VOICE] UPDATE MODE → leadName: ${payload.leadName}`);
+      console.log(`[VOICE] UPDATE MODE to leadName: ${payload.leadName}`);
     } else {
-      console.log('[VOICE] CREATE MODE → no selected lead');
+      console.log('[VOICE] CREATE MODE to no selected lead');
     }
 
     const webhookUrl = isUpdate ? process.env.N8N_VOICE_WEBHOOK_URL : process.env.N8N_VOICE_WEBHOOK_URL;
-    console.log(`[VOICE] POST to n8n → ${webhookUrl}`);
+    console.log(`[VOICE] POST to n8n to ${webhookUrl}`);
     console.log('[VOICE] Payload:', JSON.stringify(payload, null, 2));
 
     await axios.post(webhookUrl, payload);
