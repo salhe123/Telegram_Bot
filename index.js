@@ -1,3 +1,5 @@
+//v-2
+
 require('dotenv').config();
 const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
@@ -93,7 +95,7 @@ Need help? Just type /help!
   `, { parse_mode: 'Markdown' });
 });
 
-// === SESSION INIT ===
+// === SESSION INIT (ONLY ADDED) ===
 bot.session = bot.session || {};
 
 // === CALLBACKS ===
@@ -102,6 +104,7 @@ bot.on('callback_query', async (query) => {
   const action = query.data;
   console.log(`[CALLBACK] chatId: ${chatId} | action: ${action}`);
 
+  // Session per chat
   bot.session[chatId] = bot.session[chatId] || {};
   bot.session[chatId].search = bot.session[chatId].search || { query: '', page: 1, filters: {} };
 
@@ -165,7 +168,7 @@ bot.on('callback_query', async (query) => {
     console.log('[CALLBACK] cancel_draft to user cancelled');
     await bot.editMessageText('Cancelled.', { chat_id: chatId, message_id: query.message.message_id });
 
-  // === More / Previous / Filter ===
+  // === MORE / FILTER / PREV (ONLY ADDED) ===
   } else if (action === 'more') {
     bot.session[chatId].search.page += 1;
     bot.answerCallbackQuery(query.id);
@@ -197,7 +200,7 @@ bot.onText(/\/setcrm (.+)/, (msg, match) => {
   bot.sendMessage(chatId, `CRM set to: \`${url}\``, { parse_mode: 'Markdown' });
 });
 
-// === runSearch() FUNCTION ===
+// === runSearch() FUNCTION (ONLY ADDED) ===
 async function runSearch(chatId, input) {
   const crmBaseUrl = bot.session[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
   if (!crmBaseUrl) return bot.sendMessage(chatId, 'Set CRM first: */setcrm <URL>*', { parse_mode: 'Markdown' });
@@ -278,7 +281,7 @@ async function runSearch(chatId, input) {
   }
 }
 
-// === /search (uses runSearch) ===
+// === /search (MODIFIED TO USE runSearch) ===
 bot.onText(/\/search (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const input = match[1].trim();
