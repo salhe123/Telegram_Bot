@@ -1,154 +1,144 @@
 const axios = require("axios");
 const bot = require("./telegram");
+const crmManager = require("./crm_manager");
 
 function setupCommands() {
-
     // === /start ===
-
     bot.onText(/\/start/, (msg) => {
-
         const chatId = msg.chat.id;
-
         console.log(`[COMMAND /start] chatId: ${chatId}`);
-
         bot.sendMessage(chatId, "Welcome to Frappe Lead Bot!", {
-
             reply_markup: {
-
                 inline_keyboard: [
-
                     [{ text: "Create Lead", callback_data: "creat_lead" }],
-
                     [{ text: "Update Lead", callback_data: "update_lead" }],
-
                 ],
-
             },
-
         });
-
     });
-
-
 
     bot.onText(/\/help/, (msg) => {
-
         const chatId = msg.chat.id;
-
         console.log(`[COMMAND /help] chatId: ${chatId}`);
-
         bot.sendMessage(
-
             chatId,
-
             `
-
 *Frappe Lead Bot – Quick Help*
 
-
-
-*1. Set your CRM*  
-
-to \`/setcrm https://your-crm.fr8labs.co\`
-
-
+*1. Manage CRMs*
+  - \`/addcrm <alias> <url> <api_key> <api_secret>\`
+  - \`/listcrms\`
+  - \`/usecrm <alias>\`
+  - \`/delcrm <alias>\`
 
 *2. Create Lead*  
-
 to Send voice to Confirm draft
 
-
-
 *3. Search Lead*  
-
 to Type: \`/search Acme\` to See top 5 results and select and update
 
-
-
 *4. Search Tips*  
-
 to Use org name, contact name, or lead ID
 
-
-
 *5. Health Check*  
-
 to \`/health\` or visit: \`${process.env.RENDER_EXTERNAL_URL || "https://your-bot.onrender.com"}/health\`
 
-
-
 Need help? Just type /help!
-
   `,
-
             { parse_mode: "Markdown" }
-
         );
-
     });
 
-
-
-    // === /setcrm ===
-
-    bot.onText(/\/setcrm (.+)/, (msg, match) => {
-
+    // === CRM Management Commands ===
+    bot.onText(/\/addcrm (.+) (.+) (.+) (.+)/, async (msg, match) => {
         const chatId = msg.chat.id;
-
-        const url = match[1].trim();
-
-        bot.session[chatId] = bot.session[chatId] || {};
-
-        bot.session[chatId].crmBaseUrl = url;
-
-        console.log(`[COMMAND /setcrm] chatId: ${chatId} to CRM: ${url}`);
-
-        bot.sendMessage(chatId, `CRM set to: \`${url}\``, { parse_mode: "Markdown" });
-
+        const [, alias, url, apiKey, apiSecret] = match;
+        try {
+            await crmManager.addCrm(chatId, alias.trim(), url.trim(), apiKey.trim(), apiSecret.trim());
+            await bot.sendMessage(chatId, `CRM '${alias}' added successfully!`);
+        } catch (error) {
+            await bot.sendMessage(chatId, `Error adding CRM: ${error.message}`);
+        }
     });
 
+    bot.onText(/\/listcrms/, async (msg) => {
+        const chatId = msg.chat.id;
+        const crms = await crmManager.listCrms(chatId);
+        if (crms.length === 0) {
+            await bot.sendMessage(chatId, "No CRMs configured yet. Use `/addcrm` to add one.");
+            return;
+        }
+        const crmList = crms.map(crm => `- ${crm.alias} (${crm.url})`).join("\n");
+        await bot.sendMessage(chatId, `Your configured CRMs:\n${crmList}`);
+    });
 
+    bot.onText(/\/usecrm (.+)/, async (msg, match) => {
+        const chatId = msg.chat.id;
+        const alias = match[1].trim();
+        const crm = await crmManager.getCrm(chatId, alias);
+        if (crm) {
+            crmManager.setActiveCrm(chatId, alias);
+            await bot.sendMessage(chatId, `CRM '${alias}' is now active.`);
+        } else {
+            await bot.sendMessage(chatId, `CRM with alias '${alias}' not found.`);
+        }
+    });
+
+    bot.onText(/\/delcrm (.+)/, async (msg, match) => {
+        const chatId = msg.chat.id;
+        const alias = match[1].trim();
+        try {
+            await crmManager.deleteCrm(chatId, alias);
+            // Also clear active CRM if it was the one deleted
+            if (crmManager.getActiveCrmAlias(chatId) === alias) {
+                crmManager.setActiveCrm(chatId, null);
+            }
+            await bot.sendMessage(chatId, `CRM '${alias}' deleted successfully.`);
+        } catch (error) {
+            await bot.sendMessage(chatId, `Error deleting CRM: ${error.message}`);
+        }
+    });
+
+    // === /setcrm (deprecated, will be removed later) ===
+    bot.onText(/\/setcrm (.+)/, (msg, match) => {
+        const chatId = msg.chat.id;
+        const url = match[1].trim();
+        bot.sendMessage(chatId, `The /setcrm command is deprecated. Please use \`/addcrm\` and \`/usecrm\` instead.`);
+    });
 
     // === /search (uses runSearch) ===
-
     bot.onText(/\/search (.+)/, async (msg, match) => {
-
         const chatId = msg.chat.id;
-
         const input = match[1].trim();
 
-
-
         bot.session[chatId] = bot.session[chatId] || {};
-
         bot.session[chatId].search = bot.session[chatId].search || {
-
             query: "",
-
             page: 1,
-
             filters: {},
-
         };
-
-        bot.session[chatId].search.page = 1; // ← ADD THIS
-
-
+        bot.session[chatId].search.page = 1;
 
         await runSearch(chatId, input);
-
     });
-
 }
 
 // === runSearch() FUNCTION ===
 async function runSearch(chatId, input) {
-    const crmBaseUrl =
-        bot.session[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
-    if (!crmBaseUrl)
-        return bot.sendMessage(chatId, "Set CRM first: */setcrm <URL>*", {
-            parse_mode: "Markdown",
-        });
+    const activeCrmAlias = crmManager.getActiveCrmAlias(chatId);
+    if (!activeCrmAlias) {
+        return bot.sendMessage(chatId, "No active CRM selected. Use `/usecrm <alias>` to select one.");
+    }
+
+    const activeCrm = await crmManager.getCrm(chatId, activeCrmAlias);
+    if (!activeCrm) {
+        return bot.sendMessage(chatId, `Active CRM '${activeCrmAlias}' not found. Please use 
+`/usecrm <alias>` to select a valid CRM.`);
+    }
+
+    const crmBaseUrl = activeCrm.url;
+    const frappeApiKey = activeCrm.apiKey;
+    const frappeApiSecret = activeCrm.apiSecret;
 
     // === ONLY UPDATE query/filters if input is provided (from /search) ===
     if (input) {
@@ -204,7 +194,7 @@ async function runSearch(chatId, input) {
                 limit_start: start,
             },
             headers: {
-                Authorization: `token ${process.env.FRAPPE_API_KEY}:${process.env.FRAPPE_SECRET_KEY}`,
+                Authorization: `token ${frappeApiKey}:${frappeApiSecret}`,
             },
         });
 
@@ -224,7 +214,7 @@ async function runSearch(chatId, input) {
                 limit_start: start,
             },
             headers: {
-                Authorization: `token ${process.env.FRAPPE_API_KEY}:${process.env.FRAPPE_SECRET_KEY}`,
+                Authorization: `token ${frappeApiKey}:${frappeApiSecret}`,
             },
         });
 
@@ -243,7 +233,7 @@ async function runSearch(chatId, input) {
 
         const lines = combined
             .map((l, i) => {
-                const name =
+                const name = 
                     [l.first_name, l.last_name].filter(Boolean).join(" ") || "—";
                 return `*[${i + 1 + start}] ${l.name}* | ${l.organization || "—"} — ${name} | ${l.status || "—"} | Owner: ${l.owner || "—"} | ${l.modified.split(" ")[0]}`;
             })

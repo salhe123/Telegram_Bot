@@ -1,6 +1,7 @@
 const axios = require("axios");
 const bot = require("./telegram");
 const { runSearch } = require("./commands");
+const crmManager = require("./crm_manager");
 
 function setupCallbacks() {
     bot.on("callback_query", async (query) => {
@@ -19,7 +20,7 @@ function setupCallbacks() {
             console.log(`[CALLBACK] creat_lead to prompt voice`);
             await bot.sendMessage(
                 chatId,
-                "Send a *voice message* with lead details.\nSet CRM with \/setcrm <URL>* first.",
+                "Send a *voice message* with lead details.\nUse \`/usecrm <alias>\` to select a CRM first.",
                 { parse_mode: "Markdown" }
             );
         } else if (action === "update_lead") {
@@ -34,13 +35,32 @@ function setupCallbacks() {
             console.log(`[CALLBACK] select_lead to saved: ${leadName}`);
             await bot.sendMessage(
                 chatId,
-                `Selected: *${leadName}*\n\nSend *voice* to update.`,
+                `Selected: *${leadName}*\n\nSend *voice* to update.`, 
                 { parse_mode: "Markdown" }
             );
         } else if (action.startsWith("confirm_draft:")) {
             const draftId = action.split(":")[1];
-            const crmBaseUrl =
-                bot.session?.[chatId]?.crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
+            
+            const activeCrmAlias = crmManager.getActiveCrmAlias(chatId);
+            if (!activeCrmAlias) {
+                await bot.editMessageText("No active CRM selected. Use `/usecrm <alias>` to select one.", {
+                    chat_id: chatId,
+                    message_id: query.message.message_id,
+                });
+                return;
+            }
+
+            const activeCrm = await crmManager.getCrm(chatId, activeCrmAlias);
+            if (!activeCrm) {
+                await bot.editMessageText(`Active CRM '${activeCrmAlias}' not found. Please use \
+`/usecrm <alias>
+` to select a valid CRM.`, {
+                    chat_id: chatId,
+                    message_id: query.message.message_id,
+                });
+                return;
+            }
+            const crmBaseUrl = activeCrm.url;
 
             const leadData = {};
             const lines = query.message.text.split("\n").filter((l) => l.trim() !== "");
@@ -50,7 +70,7 @@ function setupCallbacks() {
             );
 
             for (const line of lines) {
-                const clean = line.replace(/\*/g, "").trim();
+                const clean = line.replace(/\* /g, "").trim();
                 const match = clean.match(/• (.+?): (.+)/);
                 if (match) {
                     const key = match[1].trim().toLowerCase().replace(/ /g, "_");
@@ -76,8 +96,8 @@ function setupCallbacks() {
                     message_id: query.message.message_id,
                 });
             } catch (err) {
-                console.error("[ERROR]", err.message);
-                await bot.editMessageText("Error.", {
+                console.error("[ERROR]", err.response?.data || err.message);
+                await bot.editMessageText("Error creating lead.", {
                     chat_id: chatId,
                     message_id: query.message.message_id,
                 });

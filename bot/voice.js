@@ -1,5 +1,6 @@
 const axios = require("axios");
 const bot = require("./telegram");
+const crmManager = require("./crm_manager");
 
 function setupVoiceHandler() {
     bot.on("voice", async (msg) => {
@@ -10,6 +11,26 @@ function setupVoiceHandler() {
 
         bot.session[chatId] = bot.session[chatId] || {};
 
+        const activeCrmAlias = crmManager.getActiveCrmAlias(chatId);
+        if (!activeCrmAlias) {
+            console.log("[VOICE] No active CRM selected");
+            return bot.sendMessage(chatId, "No active CRM selected. Use `/usecrm <alias>` to select one.", {
+                parse_mode: "Markdown",
+            });
+        }
+
+        const activeCrm = await crmManager.getCrm(chatId, activeCrmAlias);
+        if (!activeCrm) {
+            console.log(`[VOICE] Active CRM '${activeCrmAlias}' not found`);
+            return bot.sendMessage(chatId, `Active CRM '${activeCrmAlias}' not found. Please use \\\`/usecrm <alias>\\\ to select a valid CRM.`, {
+                parse_mode: "Markdown",
+            });
+        }
+        const crmBaseUrl = activeCrm.url;
+        const frappeApiKey = activeCrm.apiKey;
+        const frappeApiSecret = activeCrm.apiSecret;
+
+
         try {
             await bot.sendMessage(chatId, "Processing voice...");
             console.log("[VOICE] Getting file link...");
@@ -17,16 +38,7 @@ function setupVoiceHandler() {
             const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
             console.log("[VOICE] File URL:", fileUrl);
 
-            const crmBaseUrl =
-                bot.session[chatId].crmBaseUrl || process.env.FRAPPE_CRM_BASE_URL;
-            if (!crmBaseUrl) {
-                console.log("[VOICE] CRM not set");
-                return bot.sendMessage(chatId, "Set CRM: */setcrm <URL>*", {
-                    parse_mode: "Markdown",
-                });
-            }
-
-            const payload = { fileUrl, chatId, crmBaseUrl };
+            const payload = { fileUrl, chatId, crmBaseUrl, frappeApiKey, frappeApiSecret };
             const isUpdate = !!bot.session[chatId].selectedLead;
 
             if (isUpdate) {
@@ -52,7 +64,7 @@ function setupVoiceHandler() {
                 isUpdate ? "Updating lead..." : "Analyzing..."
             );
         } catch (err) {
-            console.error("[VOICE] ERROR:", err.message);
+            console.error("[VOICE] ERROR:", err.response?.data || err.message);
             bot.sendMessage(chatId, "Error. Try again.");
         }
     });
