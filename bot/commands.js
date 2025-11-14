@@ -299,7 +299,7 @@ async function runSearch(chatId, input, doctype) {
         });
 
         // For deals, search by deal_name. For leads, keep organizational search.
-        const nameSearchField = currentDoctype === "CRM Deal" ? "deal_name" : "first_name";
+        const nameSearchField = currentDoctype === "CRM Deal" ? "name" : "first_name";
         const nameRes = await axios.get(`${crmBaseUrl}/api/resource/${currentDoctype}`, {
             params: {
                 filters: JSON.stringify([[nameSearchField, "like", `%${query}%`]]),
