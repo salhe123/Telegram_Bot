@@ -299,7 +299,7 @@ async function runSearch(chatId, input, doctype) {
         });
 
         // For deals, search by deal_name. For leads, keep organizational search.
-        const nameSearchField = currentDoctype === "CRM Deal" ? "name" : "first_name";
+        const nameSearchField = currentDoctype === "CRM Deal" ? "organization" : "first_name";
         const nameRes = await axios.get(`${crmBaseUrl}/api/resource/${currentDoctype}`, {
             params: {
                 filters: JSON.stringify([[nameSearchField, "like", `%${query}%`]]),
@@ -327,7 +327,7 @@ async function runSearch(chatId, input, doctype) {
 
         const lines = combined
             .map((item, i) => {
-                const primaryName = currentDoctype === "CRM Deal" ? item.name : ([item.first_name, item.last_name].filter(Boolean).join(" ")) || "—";
+                const primaryName = currentDoctype === "CRM Deal" ? item.organization : ([item.first_name, item.last_name].filter(Boolean).join(" ")) || "—";
                 return `*[${i + 1 + start}] ${item.name}* | ${item.organization || "—"} — ${primaryName} | ${item.status || "—"} | Owner: ${item.owner || "—"} | ${item.modified.split(" ")[0]}`;
             })
             .join("\n\n");
