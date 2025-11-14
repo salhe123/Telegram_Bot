@@ -1,10 +1,10 @@
 {
-  "name": "CONFIRM_LEAD",
+  "name": "CONFIRM_DEAL",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "CONFIRM_LEAD",
+        "path": "CONFIRM_DEAL",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
@@ -20,7 +20,7 @@
     {
       "parameters": {
         "dataType": "string",
-        "value1": "={{ ($json.leadData.first_name || '').trim() }}",
+        "value1": "={{ ($json.dealData.deal_name || '').trim() }}",
         "rules": {
           "rules": [
             {
@@ -50,7 +50,7 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": {{$json.chatId}},\n  \"text\": \"Please provide your *First Name* to create the lead it is mandatory so Record again please!\"\n}"
+        "bodyParametersJson": "={\n  \"chat_id\": $json.chatId,\n  \"text\": \"Please provide a *Deal Name* to create the deal it is mandatory so Record again please!\"\n}"
       },
       "name": "Prompt User1",
       "type": "n8n-nodes-base.httpRequest",
@@ -65,12 +65,12 @@
       "parameters": {
         "authentication": "headerAuth",
         "requestMethod": "POST",
-        "url": "={{ $json.crmBaseUrl }}/api/resource/CRM%20Lead",
+        "url": "={{ $json.crmBaseUrl }}/api/resource/CRM%20Deal",
         "jsonParameters": true,
         "options": {
           "fullResponse": true
         },
-        "bodyParametersJson": "={{ $json.leadData }}",
+        "bodyParametersJson": "={{ $json.dealData }}",
         "headerParameters": {
           "parameters": [
             {
@@ -80,7 +80,7 @@
           ]
         }
       },
-      "name": "Create Lead1",
+      "name": "Create Deal1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -104,7 +104,7 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": \"{{ $('Wait for Confirmation1').item.json.body.chatId }}\",\n  \"text\": \"Lead created! View here: {{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}/app/lead/{{ $('Create Lead1').item.json.body.data.name || 'unknown' }}\",\n  \"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "={\n  \"chat_id\": \"{{ $('Wait for Confirmation1').item.json.body.chatId }}\",\n  \"text\": \"Deal created! View here: {{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}/app/deal/{{ $('Create Deal1').item.json.body.data.name || 'unknown' }}\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
       "name": "Send CRM Link1",
       "type": "n8n-nodes-base.httpRequest",
@@ -118,7 +118,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Code Node after Wait for Confirmation1\nconst text = $json.body.leadData;\nlet leadData = {};\n\nif (Array.isArray(text)) {\n  // Parse from message lines\n  text.forEach(line => {\n    const match = line.match(/• \\*(.+?):\\* (.+)/);\n    if (match) {\n      const key = match[1].trim().toLowerCase().replace(/ /g, '_');\n      leadData[key] = match[2].trim();\n    }\n  });\n} else if (typeof text === 'string') {\n  try {\n    leadData = JSON.parse(text);\n  } catch {}\n}\n\nreturn {\n  json: {\n    draftId: $json.body.draftId,\n    chatId: $json.body.chatId,\n    crmBaseUrl: $json.body.crmBaseUrl,   // Added\n    leadData\n  }\n};"
+        "jsCode": "// Code Node after Wait for Confirmation1\nconst text = $json.body.dealData;\nlet dealData = {};\n\nif (Array.isArray(text)) {\n  // Parse from message lines\n  text.forEach(line => {\n    const match = line.match(/• \\*(.+?):\\* (.+)/);\n    if (match) {\n      const key = match[1].trim().toLowerCase().replace(/ /g, '_');\n      dealData[key] = match[2].trim();\n    }\n  });\n} else if (typeof text === 'string') {\n  try {\n    dealData = JSON.parse(text);\n  } catch (e) {\n    // Ignore parsing errors\n  }\n}\n\nreturn {\n  json: {\n    draftId: $json.body.draftId,\n    chatId: $json.body.chatId,\n    crmBaseUrl: $json.body.crmBaseUrl,   // Added\n    dealData\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -127,7 +127,7 @@
         272
       ],
       "id": "f2c00e56-f804-44c0-8f37-a9a0684b59e9",
-      "name": "leadData"
+      "name": "dealData"
     }
   ],
   "pinData": {},
@@ -136,7 +136,7 @@
       "main": [
         [
           {
-            "node": "leadData",
+            "node": "dealData",
             "type": "main",
             "index": 0
           }
@@ -147,7 +147,7 @@
       "main": [
         [
           {
-            "node": "Create Lead1",
+            "node": "Create Deal1",
             "type": "main",
             "index": 0
           }
@@ -161,7 +161,7 @@
         ]
       ]
     },
-    "Create Lead1": {
+    "Create Deal1": {
       "main": [
         [
           {
@@ -172,7 +172,7 @@
         ]
       ]
     },
-    "leadData": {
+    "dealData": {
       "main": [
         [
           {

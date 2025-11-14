@@ -1,0 +1,148 @@
+{
+  "name": "CONVERT_LEAD_TO_DEAL",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "CONVERT_LEAD_TO_DEAL",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -2720,
+        912
+      ],
+      "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      "webhookId": "f0e9d8c7-b6a5-4321-fedc-ba9876543210"
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "POST",
+        "url": "={{ $(\"Webhook\").item.json.body.crmBaseUrl }}/api/method/frappe.crm.doctype.lead.lead.convert_lead",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\n  \"lead\": \"{{ $(\"Webhook\").item.json.body.leadName }}\"\n}",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"token \" + $(\"Webhook\").item.json.body.frappeApiKey + \":\" + $(\"Webhook\").item.json.body.frappeApiSecret }}"
+            }
+          ]
+        }
+      },
+      "name": "Convert Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -2496,
+        912
+      ],
+      "id": "1a2b3c4d-5e6f-7890-abcd-ef1234567890",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "QMLdwQmE0rzxBFFH",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "PUT",
+        "url": "={{ $(\"Webhook\").item.json.body.crmBaseUrl }}/api/resource/Lead/{{ $(\"Webhook\").item.json.body.leadName }}",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\n  \"status\": \"Converted\"\n}",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"token \" + $(\"Webhook\").item.json.body.frappeApiKey + \":\" + $(\"Webhook\").item.json.body.frappeApiSecret }}"
+            }
+          ]
+        }
+      },
+      "name": "Update Lead Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -2272,
+        912
+      ],
+      "id": "98765432-10fe-dcba-9876-543210fedcba",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "QMLdwQmE0rzxBFFH",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot{{ $(\"Webhook\").item.json.body.telegramBotToken }}/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\n  \"chat_id\": {{ $(\"Webhook\").item.json.body.chatId }},\n  \"text\": \"Lead '{{ $(\"Webhook\").item.json.body.leadName }}' converted to Deal and status updated!\",\n  \"parse_mode\": \"Markdown\"\n}"
+      },
+      "name": "Send Confirmation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -2048,
+        912
+      ],
+      "id": "cba98765-4321-0fed-cba9-876543210fed"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Convert Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Lead": {
+      "main": [
+        [
+          {
+            "node": "Update Lead Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead Status": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1c5334dd-7876-4839-ba0c-14b371a2e61c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ff704f4173ec39b158b66f039a9d69a1a97429263ff20f475877150f83b88720"
+  },
+  "id": "oG5uPciHY2sexiVm",
+  "tags": []
+}

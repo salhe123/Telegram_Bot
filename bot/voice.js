@@ -22,7 +22,7 @@ function setupVoiceHandler() {
         const activeCrm = await crmManager.getCrm(chatId, activeCrmAlias);
         if (!activeCrm) {
             console.log(`[VOICE] Active CRM '${activeCrmAlias}' not found`);
-            return bot.sendMessage(chatId, `Active CRM '${activeCrmAlias}' not found. Please use \\\`/usecrm <alias>\\\ to select a valid CRM.`, {
+            return bot.sendMessage(chatId, `Active CRM '${activeCrmAlias}' not found. Please use \"/usecrm <alias>\` to select a valid CRM.`, {
                 parse_mode: "Markdown",
             });
         }
@@ -30,29 +30,36 @@ function setupVoiceHandler() {
         const frappeApiKey = activeCrm.apiKey;
         const frappeApiSecret = activeCrm.apiSecret;
 
+        const currentDoctype = bot.session[chatId].currentDoctype || "CRM Lead"; // Default to Lead if not set
 
         try {
-            await bot.sendMessage(chatId, "Processing voice...");
+            await bot.sendMessage(chatId, `Processing voice for ${currentDoctype.toLowerCase()}...`);
             console.log("[VOICE] Getting file link...");
             const file = await bot.getFile(fileId);
             const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
             console.log("[VOICE] File URL:", fileUrl);
 
             const payload = { fileUrl, chatId, crmBaseUrl, frappeApiKey, frappeApiSecret };
-            const isUpdate = !!bot.session[chatId].selectedLead;
+            const isUpdate = !!bot.session[chatId].selectedDocName;
 
             if (isUpdate) {
-                payload.leadName = bot.session[chatId].selectedLead;
+                payload.docName = bot.session[chatId].selectedDocName; // Use generic docName
                 payload.isUpdate = true;
-                delete bot.session[chatId].selectedLead;
-                console.log(`[VOICE] UPDATE MODE to leadName: ${payload.leadName}`);
+                delete bot.session[chatId].selectedDocName;
+                console.log(`[VOICE] UPDATE MODE for ${currentDoctype} to docName: ${payload.docName}`);
             } else {
-                console.log("[VOICE] CREATE MODE to no selected lead");
+                console.log(`[VOICE] CREATE MODE for ${currentDoctype}`);
             }
 
-            const webhookUrl = isUpdate
-                ? process.env.N8N_VOICE_WEBHOOK_URL
-                : process.env.N8N_VOICE_WEBHOOK_URL;
+            let webhookUrl;
+            if (currentDoctype === "CRM Lead") {
+                webhookUrl = process.env.N8N_VOICE_LEAD_WEBHOOK_URL;
+            } else if (currentDoctype === "CRM Deal") {
+                webhookUrl = process.env.N8N_VOICE_DEAL_WEBHOOK_URL;
+            } else {
+                return bot.sendMessage(chatId, "Error: Unknown document type for voice processing.");
+            }
+            
             console.log(`[VOICE] POST to n8n to ${webhookUrl}`);
             console.log("[VOICE] Payload:", JSON.stringify(payload, null, 2));
 
@@ -61,7 +68,7 @@ function setupVoiceHandler() {
 
             await bot.sendMessage(
                 chatId,
-                isUpdate ? "Updating lead..." : "Analyzing..."
+                isUpdate ? `Updating ${currentDoctype.toLowerCase()}...` : `Analyzing ${currentDoctype.toLowerCase()}...`
             );
         } catch (err) {
             console.error("[VOICE] ERROR:", err.response?.data || err.message);

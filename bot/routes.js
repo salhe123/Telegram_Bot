@@ -9,9 +9,12 @@ function setupRoutes(app) {
       env: {
         token: !!process.env.TELEGRAM_BOT_TOKEN,
         crm: !!process.env.FRAPPE_CRM_BASE_URL,
-        n8n_voice: !!process.env.N8N_VOICE_WEBHOOK_URL,
-        n8n_update: !!process.env.N8N_UPDATE_WEBHOOK_URL,
-        n8n_confirm: !!process.env.N8N_CONFIRM_WEBHOOK_URL,
+        n8n_voice_lead: !!process.env.N8N_VOICE_LEAD_WEBHOOK_URL, 
+        n8n_confirm_lead: !!process.env.N8N_CONFIRM_WEBHOOK_URL, 
+        n8n_create_task: !!process.env.N8N_CREATE_TASK_WEBHOOK_URL,
+        n8n_convert_lead: !!process.env.N8N_CONVERT_LEAD_WEBHOOK_URL,
+        n8n_voice_deal: !!process.env.N8N_VOICE_DEAL_WEBHOOK_URL,
+        n8n_confirm_deal: !!process.env.N8N_CONFIRM_DEAL_WEBHOOK_URL,
       },
     };
     console.log("[HEALTH] GET /health to 200");
@@ -20,7 +23,7 @@ function setupRoutes(app) {
 
   app.get("/", (req, res) => {
     console.log("[ROOT] GET / to 200");
-    res.send("Frappe Lead Bot is running");
+    res.send("Frappe CRM Bot is running");
   });
 }
 

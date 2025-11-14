@@ -1,10 +1,10 @@
 {
-  "name": "Frappe CRM Lead - Create & Update",
+  "name": "Frappe CRM Deal - Create & Update",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "VOICE_LEAD_TRIGGER",
+        "path": "VOICE_DEAL_TRIGGER",
         "options": {}
       },
       "name": "Webhook",
@@ -77,7 +77,7 @@
       "parameters": {
         "authentication": "headerAuth",
         "requestMethod": "GET",
-        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/DocField?filters=[[\"parent\",\"=\",\"CRM Lead\"]]",
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/DocField?filters=[[\"parent\",\"=\",\"CRM Deal\"]]",
         "options": {},
         "headerParameters": {
           "parameters": [
@@ -88,7 +88,7 @@
           ]
         }
       },
-      "name": "Get Lead Fields",
+      "name": "Get Deal Fields",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -126,7 +126,7 @@
         "messages": {
           "values": [
             {
-              "content": "=You are a CRM data extractor. Extract ONLY mentioned fields from transcription.\n\nText: {{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}\n\nRULES:\n- Use ONLY field names above\n- DO NOT use \"name\" field\n- Split full name into first_name and last_name if mentioned\n- Output ONLY JSON\n\nExample: {\"first_name\": \"John\", \"last_name\": \"Doe\", \"email\": \"john@gmail.com\"}"
+              "content": "=You are a CRM data extractor. Extract ONLY mentioned fields from transcription.\n\nText: {{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}\n\nRULES:\n- Use ONLY field names above\n- DO NOT use \"name\" field\n- Output ONLY JSON\n\nExample: {\"deal_name\": \"Project X\", \"status\": \"Open\"}"
             }
           ]
         },
@@ -153,7 +153,7 @@
         "mode": "runOnceForEachItem",
         "jsCode": "return { json: $input.item.json.message.content };"
       },
-      "name": "Extract Lead Data",
+      "name": "Extract Deal Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -187,7 +187,7 @@
       "parameters": {
         "authentication": "headerAuth",
         "requestMethod": "PUT",
-        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/CRM%20Lead/{{ $('Webhook').item.json.body.leadName }}",
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/CRM%20Deal/{{ $('Webhook').item.json.body.dealName }}",
         "jsonParameters": true,
         "options": {},
         "bodyParametersJson": "={{ $json }}",
@@ -200,7 +200,7 @@
           ]
         }
       },
-      "name": "Update Lead",
+      "name": "Update Deal",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -221,7 +221,7 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": {{ $('Webhook').item.json.body.chatId }},\n  \"text\": \"Lead updated! View: {{ $('Webhook').item.json.body.crmBaseUrl }}/app/lead/{{ $json.data.name }}\",\n  \"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $('Webhook').item.json.body.chatId }},\n  \"text\": \"Deal updated! View: {{ $('Webhook').item.json.body.crmBaseUrl }}/app/deal/{{ $json.data.name }}\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
       "name": "Send Update Link",
       "type": "n8n-nodes-base.httpRequest",
@@ -235,7 +235,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const leadData = $input.item.json;\nconst chatId = $('Webhook').item.json.body.chatId;\n\nif (!leadData || !chatId) {\n  throw new Error('Missing leadData or chatId');\n}\n\n// MAP AI \"name\" → CRM \"first_name\"\nif (leadData.name) {\n  leadData.first_name = leadData.name;\n  delete leadData.name;\n}\n\nconst fieldsList = Object.entries(leadData)\n  .map(([key, value]) => `• *${key}:* ${value}`)\n  .join('\\n');\n\nfunction uuidv4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nconst draftId = uuidv4();\n\nconst telegramPayload = {\n  chat_id: chatId,\n  text: `*Draft Lead*\\n\\n${fieldsList || 'No data'}\\n\\nConfirm?`,\n  parse_mode: 'Markdown',\n  reply_markup: {\n    inline_keyboard: [\n      [{ text: 'Confirm', callback_data: `confirm_draft:${draftId}` }],\n      [{ text: 'Cancel', callback_data: 'cancel_draft' }]\n    ]\n  },\n  draftId: draftId,\n  leadData: leadData  // now has first_name\n};\n\nreturn { json: telegramPayload };"
+        "jsCode": "const dealData = JSON.parse($input.item.json);\nconst chatId = $('Webhook').item.json.body.chatId;\n\nif (!dealData || !chatId) {\n  throw new Error('Missing dealData or chatId');\n}\n\nconst fieldsList = Object.entries(dealData)\n  .map(([key, value]) => `• *${key}:* ${value}`)\n  .join('\\n');\n\nfunction uuidv4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nconst draftId = uuidv4();\n\nconst telegramPayload = {\n  chat_id: chatId,\n  text: `*Draft Deal*\\n\\n${fieldsList || 'No data'}\\n\\nConfirm?`,\n  parse_mode: 'Markdown',\n  reply_markup: {\n    inline_keyboard: [\n      [{ text: 'Confirm', callback_data: `confirm_deal_draft:${draftId}` }],\n      [{ text: 'Cancel', callback_data: 'cancel_draft' }]\n    ]\n  },\n  draftId: draftId,\n  dealData: dealData\n};\n\nreturn { json: telegramPayload };"
       },
       "id": "1e4f0625-5e99-490b-b79a-644ef8fa7179",
       "name": "Format Telegram Message",
@@ -249,7 +249,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "let leadData = {};\nif ($json.leadData) {\n  leadData = typeof $json.leadData === 'string'\n    ? JSON.parse($json.leadData)\n    : $json.leadData;\n}\n\nconst draftId = $json.draftId;\nconst chatId = $json.chat_id;\nconst crmBaseUrl = $('Webhook').item.json.body.crmBaseUrl;\n\nconst pretty = Object.entries(leadData)\n  .map(([k, v]) => {\n    const label = k.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');\n    return `• *${label}:* ${v || '—'}`;\n  })\n  .join('\\n');\n\nreturn {\n  json: {\n    chat_id: chatId,\n    text: `*Draft Lead*\\n\\n${pretty}\\n\\nConfirm?\\n\\n(draftId: \\`${draftId}\\`)`,\n    parse_mode: \"Markdown\",\n    reply_markup: {\n      inline_keyboard: [\n        [\n          {\n            text: \"Confirm\",\n            callback_data: `confirm_draft:${draftId}`\n          },\n          {\n            text: \"Cancel\",\n            callback_data: \"cancel_draft\"\n          }\n        ]\n      ]\n    }\n  }\n};"
+        "jsCode": "let dealData = {};\nif ($json.dealData) {\n  dealData = typeof $json.dealData === 'string'\n    ? JSON.parse($json.dealData)\n    : $json.dealData;\n}\n\nconst draftId = $json.draftId;\nconst chatId = $json.chat_id;\nconst crmBaseUrl = $('Webhook').item.json.body.crmBaseUrl;\n\nconst pretty = Object.entries(dealData)\n  .map(([k, v]) => {\n    const label = k.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');\n    return `• *${label}:* ${v || '—'}`;\n  })\n  .join('\\n');\n\nreturn {\n  json: {\n    chat_id: chatId,\n    text: `*Draft Deal*\\n\\n${pretty}\\n\\nConfirm?\\n\\n(draftId: \\`${draftId}\\`)`,\n    parse_mode: \"Markdown\",\n    reply_markup: {\n      inline_keyboard: [\n        [\n          {\n            text: \"Confirm\",\n            callback_data: `confirm_deal_draft:${draftId}`\n          },\n          {\n            text: \"Cancel\",\n            callback_data: \"cancel_draft\"\n          }\n        ]\n      ]\n    }\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -276,7 +276,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "=application/json",
-        "body": "={{\n{\n  chat_id: $json.chat_id,\n  text: $json.text,\n  parse_mode: \"Markdown\",\n  crmBaseUrl: $json.crmBaseUrl ,\n  reply_markup: $json.reply_markup\n\n}\n}}",
+        "body": "={{\n{\n  \"chat_id\": $json.chat_id,\n  \"text\": $json.text,\n  \"parse_mode\": \"Markdown\",\n  \"crmBaseUrl\": $json.crmBaseUrl,\n  \"reply_markup\": $json.reply_markup\n\n}\n}}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -300,8 +300,8 @@
             },
             {
               "id": "82d5bad4-fe54-485f-aa8c-b187e0776bea",
-              "name": "leadData",
-              "value": "={{ $json.leadData }}",
+              "name": "dealData",
+              "value": "={{ $json.dealData }}",
               "type": "object"
             },
             {
@@ -376,14 +376,14 @@
       "main": [
         [
           {
-            "node": "Get Lead Fields",
+            "node": "Get Deal Fields",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Lead Fields": {
+    "Get Deal Fields": {
       "main": [
         [
           {
@@ -409,14 +409,14 @@
       "main": [
         [
           {
-            "node": "Extract Lead Data",
+            "node": "Extract Deal Data",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract Lead Data": {
+    "Extract Deal Data": {
       "main": [
         [
           {
@@ -438,14 +438,14 @@
         ],
         [
           {
-            "node": "Update Lead",
+            "node": "Update Deal",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Update Lead": {
+    "Update Deal": {
       "main": [
         [
           {

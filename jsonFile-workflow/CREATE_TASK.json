@@ -1,0 +1,96 @@
+{
+  "name": "CREATE_TASK",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "CREATE_TASK",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [-2720, 912],
+      "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      "webhookId": "f0e9d8c7-b6a5-4321-fedc-ba9876543210"
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "POST",
+        "url": "={{ $(\"Webhook\").item.json.body.crmBaseUrl }}/api/resource/Task",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\n  \"subject\": \"{{ $(\"Webhook\").item.json.body.taskTitle }}\",\n  \"description\": \"{{ $(\"Webhook\").item.json.body.taskDescription || '' }}\",\n  \"status\": \"Open\",\n  \"priority\": \"Medium\",\n  \"reference_doctype\": \"{{ $(\"Webhook\").item.json.body.doctype || 'CRM Task' }}\",\n  \"reference_name\": \"{{ $(\"Webhook\").item.json.body.docName }}\"\n}",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"token \" + $(\"Webhook\").item.json.body.frappeApiKey + \":\" + $(\"Webhook\").item.json.body.frappeApiSecret }}"
+            }
+          ]
+        }
+      },
+      "name": "Create Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [-2496, 912],
+      "id": "1a2b3c4d-5e6f-7890-abcd-ef1234567890",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "QMLdwQmE0rzxBFFH",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot{{ $(\"Webhook\").item.json.body.telegramBotToken }}/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\n  \"chat_id\": {{ $(\"Webhook\").item.json.body.chatId }},\n  \"text\": \"Task '{{ $(\"Webhook\").item.json.body.taskTitle }}' created for '{{ $(\"Webhook\").item.json.body.docName }}'!\",\n  \"parse_mode\": \"Markdown\"\n}"
+      },
+      "name": "Send Confirmation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [-2272, 912],
+      "id": "98765432-10fe-dcba-9876-543210fedcba"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Create Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Task": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1c5334dd-7876-4839-ba0c-14b371a2e61c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ff704f4173ec39b158b66f039a9d69a1a97429263ff20f475877150f83b88720"
+  },
+  "id": "oG5uPciHY2sexiVm",
+  "tags": []
+}

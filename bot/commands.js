@@ -7,11 +7,13 @@ function setupCommands() {
     bot.onText(/\/start/, (msg) => {
         const chatId = msg.chat.id;
         console.log(`[COMMAND /start] chatId: ${chatId}`);
-        bot.sendMessage(chatId, "Welcome to Frappe Lead Bot!", {
+        bot.sendMessage(chatId, "Welcome to Frappe CRM Bot!", {
             reply_markup: {
                 inline_keyboard: [
                     [{ text: "Create Lead", callback_data: "creat_lead" }],
                     [{ text: "Update Lead", callback_data: "update_lead" }],
+                    [{ text: "Create Deal", callback_data: "creat_deal" }],
+                    [{ text: "Update Deal", callback_data: "update_deal" }],
                 ],
             },
         });
@@ -23,7 +25,7 @@ function setupCommands() {
         bot.sendMessage(
             chatId,
             `
-*Frappe Lead Bot – Quick Help*
+*Frappe CRM Bot – Quick Help*
 
 *1. Manage CRMs*
   - \`/addcrm <alias> <url> <api_key> <api_secret>\`
@@ -31,17 +33,25 @@ function setupCommands() {
   - \`/usecrm <alias>\`
   - \`/delcrm <alias>\`
 
-*2. Create Lead*  
-to Send voice to Confirm draft
+*2. Lead Management*
+  - Create Lead: Send voice to Confirm draft
+  - Update Lead: Type: \`/searchleads Acme\` to See top 5 results and select and update
 
-*3. Search Lead*  
-to Type: \`/search Acme\` to See top 5 results and select and update
+*3. Deal Management*
+  - Create Deal: Send voice to Confirm draft
+  - Update Deal: Type: \`/searchdeals ProjectX\` to See top 5 results and select and update
 
 *4. Search Tips*  
-to Use org name, contact name, or lead ID
+to Use org name, contact name, or ID
 
 *5. Health Check*  
 to \`/health\` or visit: \`${process.env.RENDER_EXTERNAL_URL || "https://your-bot.onrender.com"}/health\`
+
+*6. Create Task*
+  - \`/createtask <lead_or_deal_name> <task_title> [task_description]\`
+
+*7. Convert Lead to Deal*
+  - \`/convertlead <lead_name>\`
 
 Need help? Just type /help!
   `,
@@ -106,8 +116,72 @@ Need help? Just type /help!
         bot.sendMessage(chatId, `The /setcrm command is deprecated. Please use \`/addcrm\` and \`/usecrm\` instead.`);
     });
 
-    // === /search (uses runSearch) ===
-    bot.onText(/\/search (.+)/, async (msg, match) => {
+    // === /createtask ===
+    bot.onText(/\/createtask (.+?) (.+?)(?: (.+))?/, async (msg, match) => {
+        const chatId = msg.chat.id;
+        const [, docName, taskTitle, taskDescription] = match; // Renamed leadName to docName for generality
+
+        const activeCrmAlias = crmManager.getActiveCrmAlias(chatId);
+        if (!activeCrmAlias) {
+            return bot.sendMessage(chatId, "No active CRM selected. Use `/usecrm <alias>` to select one.");
+        }
+
+        const activeCrm = await crmManager.getCrm(chatId, activeCrmAlias);
+        if (!activeCrm) {
+            return bot.sendMessage(chatId, `Active CRM '${activeCrmAlias}' not found. Please use \`/usecrm <alias>\` to select a valid CRM.`);
+        }
+
+        try {
+            await axios.post(process.env.N8N_CREATE_TASK_WEBHOOK_URL, {
+                chatId,
+                crmBaseUrl: activeCrm.url,
+                frappeApiKey: activeCrm.apiKey,
+                frappeApiSecret: activeCrm.apiSecret,
+                docName: docName.trim(), // Use docName
+                taskTitle: taskTitle.trim(),
+                taskDescription: taskDescription ? taskDescription.trim() : '',
+                telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
+            });
+            await bot.sendMessage(chatId, `Task creation request sent for '${docName.trim()}'.`);
+        } catch (error) {
+            console.error("[CREATE_TASK] ERROR:", error.response?.data || error.message);
+            await bot.sendMessage(chatId, "Failed to create task. Please check n8n webhook URL and CRM details.");
+        }
+    });
+
+    // === /convertlead ===
+    bot.onText(/\/convertlead (.+)/, async (msg, match) => {
+        const chatId = msg.chat.id;
+        const leadName = match[1].trim();
+
+        const activeCrmAlias = crmManager.getActiveCrmAlias(chatId);
+        if (!activeCrmAlias) {
+            return bot.sendMessage(chatId, "No active CRM selected. Use `/usecrm <alias>` to select one.");
+        }
+
+        const activeCrm = await crmManager.getCrm(chatId, activeCrmAlias);
+        if (!activeCrm) {
+            return bot.sendMessage(chatId, `Active CRM '${activeCrmAlias}' not found. Please use \`/usecrm <alias>\` to select a valid CRM.`);
+        }
+
+        try {
+            await bot.sendMessage(chatId, `Attempting to convert lead '${leadName}' to deal...`);
+            await axios.post(process.env.N8N_CONVERT_LEAD_WEBHOOK_URL, {
+                chatId,
+                crmBaseUrl: activeCrm.url,
+                frappeApiKey: activeCrm.apiKey,
+                frappeApiSecret: activeCrm.apiSecret,
+                leadName: leadName,
+                telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
+            });
+        } catch (error) {
+            console.error("[CONVERT_LEAD] ERROR:", error.response?.data || error.message);
+            await bot.sendMessage(chatId, "Failed to convert lead. Please check n8n webhook URL and CRM details.");
+        }
+    });
+
+    // === /searchleads ===
+    bot.onText(/\/searchleads (.+)/, async (msg, match) => {
         const chatId = msg.chat.id;
         const input = match[1].trim();
 
@@ -116,15 +190,34 @@ Need help? Just type /help!
             query: "",
             page: 1,
             filters: {},
+            doctype: "Lead" // Set doctype for search
         };
         bot.session[chatId].search.page = 1;
 
-        await runSearch(chatId, input);
+        await runSearch(chatId, input, "CRM Lead"); // Pass doctype
+    });
+
+    // === /searchdeals ===
+    bot.onText(/\/searchdeals (.+)/, async (msg, match) => {
+        const chatId = msg.chat.id;
+        const input = match[1].trim();
+
+        bot.session[chatId] = bot.session[chatId] || {};
+        bot.session[chatId].search = bot.session[chatId].search || {
+            query: "",
+            page: 1,
+            filters: {},
+            doctype: "Deal" // Set doctype for search
+        };
+        bot.session[chatId].search.page = 1;
+
+        await runSearch(chatId, input, "CRM Deal"); // Pass doctype
     });
 }
 
 // === runSearch() FUNCTION ===
-async function runSearch(chatId, input) {
+// Modified to accept a doctype argument
+async function runSearch(chatId, input, doctype) {
     const activeCrmAlias = crmManager.getActiveCrmAlias(chatId);
     if (!activeCrmAlias) {
         return bot.sendMessage(chatId, "No active CRM selected. Use `/usecrm <alias>` to select one.");
@@ -132,8 +225,7 @@ async function runSearch(chatId, input) {
 
     const activeCrm = await crmManager.getCrm(chatId, activeCrmAlias);
     if (!activeCrm) {
-        return bot.sendMessage(chatId, `Active CRM '${activeCrmAlias}' not found. Please use 
-`/usecrm <alias>` to select a valid CRM.`);
+        return bot.sendMessage(chatId, `Active CRM '${activeCrmAlias}' not found. Please use \`/usecrm <alias>\` to select a valid CRM.`);
     }
 
     const crmBaseUrl = activeCrm.url;
@@ -159,26 +251,28 @@ async function runSearch(chatId, input) {
         bot.session[chatId].search.query = query;
         bot.session[chatId].search.filters = filters;
         bot.session[chatId].search.page = 1;
+        bot.session[chatId].search.doctype = doctype; // Store doctype in session
     }
 
     // === Use stored query/filters/page ===
     const query = bot.session[chatId].search.query || "";
     const filters = bot.session[chatId].search.filters || {};
     const page = bot.session[chatId].search.page || 1;
+    const currentDoctype = bot.session[chatId].search.doctype || doctype; // Use doctype from session or passed argument
     const start = (page - 1) * 5;
 
     if (!query) {
-        return bot.sendMessage(chatId, "Use `/search <term>` first.");
+        return bot.sendMessage(chatId, `Use \`/search${currentDoctype === "CRM Lead" ? "leads" : "deals"} <term>\` first.`);
     }
 
     try {
-        console.log("[SEARCH] Query:", query, "Filters:", filters, "Page:", page);
+        console.log(`[SEARCH] Doctype: ${currentDoctype}, Query: ${query}, Filters: ${filters}, Page: ${page}`);
 
         const filtersArray = [["organization", "like", `%${query}%`]];
         if (filters.owner) filtersArray.push(["owner", "=", filters.owner]);
         if (filters.status) filtersArray.push(["status", "=", filters.status]);
 
-        const orgRes = await axios.get(`${crmBaseUrl}/api/resource/CRM Lead`, {
+        const orgRes = await axios.get(`${crmBaseUrl}/api/resource/${currentDoctype}`, {
             params: {
                 filters: JSON.stringify(filtersArray),
                 fields: JSON.stringify([
@@ -189,6 +283,7 @@ async function runSearch(chatId, input) {
                     "status",
                     "owner",
                     "modified",
+                    "deal_name" // Add deal_name for deals
                 ]),
                 limit_page_length: 5,
                 limit_start: start,
@@ -198,9 +293,11 @@ async function runSearch(chatId, input) {
             },
         });
 
-        const nameRes = await axios.get(`${crmBaseUrl}/api/resource/CRM Lead`, {
+        // For deals, search by deal_name. For leads, keep organizational search.
+        const nameSearchField = currentDoctype === "CRM Deal" ? "deal_name" : "first_name";
+        const nameRes = await axios.get(`${crmBaseUrl}/api/resource/${currentDoctype}`, {
             params: {
-                filters: JSON.stringify([["first_name", "like", `%${query}%`]]),
+                filters: JSON.stringify([[nameSearchField, "like", `%${query}%`]]),
                 fields: JSON.stringify([
                     "name",
                     "organization",
@@ -209,6 +306,7 @@ async function runSearch(chatId, input) {
                     "status",
                     "owner",
                     "modified",
+                    "deal_name" // Add deal_name for deals
                 ]),
                 limit_page_length: 5,
                 limit_start: start,
@@ -228,42 +326,41 @@ async function runSearch(chatId, input) {
             .slice(0, 5);
 
         if (!combined.length) {
-            return bot.sendMessage(chatId, `No leads found for "${query}"`);
+            return bot.sendMessage(chatId, `No ${currentDoctype.toLowerCase()}s found for "${query}"`);
         }
 
         const lines = combined
-            .map((l, i) => {
-                const name = 
-                    [l.first_name, l.last_name].filter(Boolean).join(" ") || "—";
-                return `*[${i + 1 + start}] ${l.name}* | ${l.organization || "—"} — ${name} | ${l.status || "—"} | Owner: ${l.owner || "—"} | ${l.modified.split(" ")[0]}`;
+            .map((item, i) => {
+                const primaryName = item.deal_name || ([item.first_name, item.last_name].filter(Boolean).join(" ")) || "—";
+                return `*[${i + 1 + start}] ${item.name}* | ${item.organization || "—"} — ${primaryName} | ${item.status || "—"} | Owner: ${item.owner || "—"} | ${item.modified.split(" ")[0]}`;
             })
             .join("\n\n");
 
         const keyboard = combined.map((_, i) => [
             {
                 text: `${i + 1 + start}`,
-                callback_data: `select_lead:${combined[i].name}`,
+                callback_data: `select_${currentDoctype === "CRM Lead" ? "lead" : "deal"}:${combined[i].name}`,
             },
         ]);
         const nav = [];
-        if (page > 1) nav.push({ text: "Previous", callback_data: "prev" });
+        if (page > 1) nav.push({ text: "Previous", callback_data: `prev_${currentDoctype === "CRM Lead" ? "lead" : "deal"}` });
         if (combined.length === 5)
-            nav.push({ text: "More", callback_data: "more" });
-        nav.push({ text: "Filter", callback_data: "filter" });
-        nav.push({ text: "Create new", callback_data: "creat_lead" });
+            nav.push({ text: "More", callback_data: `more_${currentDoctype === "CRM Lead" ? "lead" : "deal"}` });
+        nav.push({ text: "Filter", callback_data: `filter_${currentDoctype === "CRM Lead" ? "lead" : "deal"}` });
+        nav.push({ text: "Create new", callback_data: `creat_${currentDoctype === "CRM Lead" ? "lead" : "deal"}` });
         keyboard.push(nav);
 
         await bot.sendMessage(
             chatId,
-            `Page ${page} | Found ${combined.length} leads:\n\n${lines}`,
+            `Page ${page} | Found ${combined.length} ${currentDoctype.toLowerCase()}s:\n\n${lines}`,
             {
                 parse_mode: "Markdown",
                 reply_markup: { inline_keyboard: keyboard },
             }
         );
     } catch (err) {
-        console.error("[SEARCH] ERROR:", err.response?.data || err.message);
-        bot.sendMessage(chatId, "Search failed. Check CRM URL or API key.");
+        console.error(`[SEARCH] ${currentDoctype} ERROR:`, err.response?.data || err.message);
+        bot.sendMessage(chatId, `${currentDoctype} search failed. Check CRM URL or API key.`);
     }
 }
 
