@@ -266,6 +266,20 @@ async function runSearch(chatId, input, doctype) {
     }
 
     try {
+        let fieldsToFetch = [
+            "name",
+            "organization",
+            "status",
+            "owner",
+            "modified"
+        ];
+
+        if (currentDoctype === "CRM Deal") {
+            fieldsToFetch.push("deal_name");
+        } else if (currentDoctype === "CRM Lead") {
+            fieldsToFetch.push("first_name", "last_name");
+        }
+
         console.log(`[SEARCH] Doctype: ${currentDoctype}, Query: ${query}, Filters: ${filters}, Page: ${page}`);
 
         const filtersArray = [["organization", "like", `%${query}%`]];
@@ -275,16 +289,7 @@ async function runSearch(chatId, input, doctype) {
         const orgRes = await axios.get(`${crmBaseUrl}/api/resource/${currentDoctype}`, {
             params: {
                 filters: JSON.stringify(filtersArray),
-                fields: JSON.stringify([
-                    "name",
-                    "organization",
-                    "first_name",
-                    "last_name",
-                    "status",
-                    "owner",
-                    "modified",
-                    "deal_name" // Add deal_name for deals
-                ]),
+                fields: JSON.stringify(fieldsToFetch),
                 limit_page_length: 5,
                 limit_start: start,
             },
@@ -298,16 +303,7 @@ async function runSearch(chatId, input, doctype) {
         const nameRes = await axios.get(`${crmBaseUrl}/api/resource/${currentDoctype}`, {
             params: {
                 filters: JSON.stringify([[nameSearchField, "like", `%${query}%`]]),
-                fields: JSON.stringify([
-                    "name",
-                    "organization",
-                    "first_name",
-                    "last_name",
-                    "status",
-                    "owner",
-                    "modified",
-                    "deal_name" // Add deal_name for deals
-                ]),
+                fields: JSON.stringify(fieldsToFetch),
                 limit_page_length: 5,
                 limit_start: start,
             },
