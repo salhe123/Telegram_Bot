@@ -274,11 +274,11 @@ async function runSearch(chatId, input, doctype) {
             "modified"
         ];
 
-        if (currentDoctype === "CRM Deal") {
-            fieldsToFetch.push("deal_name");
-        } else if (currentDoctype === "CRM Lead") {
+        if (currentDoctype === "CRM Lead") {
             fieldsToFetch.push("first_name", "last_name");
         }
+        // Do NOT push "deal_name" for CRM Deal, as it causes an API error.
+        // We will rely on the 'name' field for deals.
 
         console.log(`[SEARCH] Doctype: ${currentDoctype}, Query: ${query}, Filters: ${filters}, Page: ${page}`);
 
@@ -327,7 +327,7 @@ async function runSearch(chatId, input, doctype) {
 
         const lines = combined
             .map((item, i) => {
-                const primaryName = item.deal_name || ([item.first_name, item.last_name].filter(Boolean).join(" ")) || "—";
+                const primaryName = currentDoctype === "CRM Deal" ? item.name : ([item.first_name, item.last_name].filter(Boolean).join(" ")) || "—";
                 return `*[${i + 1 + start}] ${item.name}* | ${item.organization || "—"} — ${primaryName} | ${item.status || "—"} | Owner: ${item.owner || "—"} | ${item.modified.split(" ")[0]}`;
             })
             .join("\n\n");
