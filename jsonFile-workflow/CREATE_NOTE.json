@@ -17,7 +17,7 @@
       "parameters": {
         "authentication": "headerAuth",
         "requestMethod": "POST",
-        "url": "={{ $("Webhook").item.json.body.crmBaseUrl }}/api/resource/Note",
+        "url": "={{ $(\"Webhook\").item.json.body.crmBaseUrl }}/api/resource/Note",
         "jsonParameters": true,
         "options": {},
         "bodyParametersJson": "{\n  \"title\": \"{{ $(\"Webhook\").item.json.body.noteTitle }}\",\n  \"content\": \"{{ $(\"Webhook\").item.json.body.noteContent || '' }}\",\n  \"public\": true,\n  \"reference_doctype\": \"Lead\",\n  \"reference_name\": \"{{ $(\"Webhook\").item.json.body.docName }}\"\n}",
@@ -44,10 +44,10 @@
     {
       "parameters": {
         "requestMethod": "POST",
-        "url": "https://api.telegram.org/bot{{ $("Webhook").item.json.body.telegramBotToken }}/sendMessage",
+        "url": "https://api.telegram.org/bot{{ $(\"Webhook\").item.json.body.telegramBotToken }}/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "{\n  \"chat_id\": {{ $(\"Webhook\").item.json.body.chatId }},\n  \"text\": \"Note '{{ $(\"Webhook\").item.json.body.noteTitle }}\' created for '{{ $(\"Webhook\").item.json.body.docName }}\'!\",\n  \"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "{\n  \"chat_id\": {{ $(\"Webhook\").item.json.body.chatId }},\n  \"text\": \"Note '{{ $(\"Webhook\").item.json.body.noteTitle }}' created for '{{ $(\"Webhook\").item.json.body.docName }}'!\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
       "name": "Send Confirmation",
       "type": "n8n-nodes-base.httpRequest",

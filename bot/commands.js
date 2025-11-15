@@ -153,7 +153,7 @@ Need help? Just type /help!
     });
 
     // === /createnote ===
-    bot.onText(/\/createnote (\S+) (\S+)(?: (.*))?/s, async (msg, match) => {
+    bot.onText(/\/createnote (\S+) "([^"]+)"(?: (.*))?/s, async (msg, match) => {
         const chatId = msg.chat.id;
         const [, docName, noteTitle, noteContent] = match;
 
