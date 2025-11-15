@@ -11,10 +11,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        -2720,
-        912
+        -3136,
+        224
       ],
-      "id": "50cd8aa4-d9fe-431a-9316-18f0a852367a",
+      "id": "822281bd-d9c4-4e4b-b384-24a2872cd25b",
       "webhookId": "e9b800f0-c8b5-49e3-a80f-84d603f52d4d"
     },
     {
@@ -32,10 +32,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        -2496,
-        912
+        -2912,
+        224
       ],
-      "id": "cf0dda4f-9ab8-4517-a1f9-960dab819927"
+      "id": "74723145-73c3-45ea-b4f8-33e9fd273eea"
     },
     {
       "parameters": {
@@ -47,10 +47,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        -2272,
-        912
+        -2688,
+        224
       ],
-      "id": "f2881113-bfec-4d45-a8a6-7c39458a326c"
+      "id": "6f854a99-d8b8-4c9a-be25-be8d52602e24"
     },
     {
       "parameters": {
@@ -62,13 +62,13 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        -2048,
-        912
+        -2464,
+        224
       ],
-      "id": "8466272e-2d0e-473b-90af-ffc9db8735ae",
+      "id": "73964b9c-4c65-48ea-b9a6-e96e282999a1",
       "credentials": {
         "openAiApi": {
-          "id": "2WmDcD68ZlBMN6Sr",
+          "id": "07RiFjrpWpiDUJB6",
           "name": "OpenAi account"
         }
       }
@@ -76,14 +76,13 @@
     {
       "parameters": {
         "authentication": "headerAuth",
-        "requestMethod": "GET",
-        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/DocField?filters=[[\"parent\",\"=\",\"CRM Deal\"]]",
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/method/frappe.client.get_list?doctype=CRM%20Deal&fields=%5B%22*%22%5D",
         "options": {},
-        "headerParameters": {
-          "parameters": [
+        "headerParametersUi": {
+          "parameter": [
             {
               "name": "Authorization",
-              "value": "={{ \"token \" + $('Webhook').item.json.body.frappeApiKey + \":\" + $('Webhook').item.json.body.frappeApiSecret }}"
+              "value": "=token {{ $('Webhook').item.json.body.frappeApiKey }}:{{ $('Webhook').item.json.body.frappeApiSecret }}"
             }
           ]
         }
@@ -92,13 +91,13 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        -1824,
-        912
+        -2240,
+        224
       ],
-      "id": "52425f8b-50ba-41fa-a6cb-10270cd31c2d",
+      "id": "f21a93ce-61eb-4f14-b51f-6b4fee37e548",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "QMLdwQmE0rzxBFFH",
+          "id": "usDoofPm00vuGNxF",
           "name": "Header Auth account"
         }
       }
@@ -106,16 +105,16 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const deals = $input.item.json.message;\n\nif (!deals || deals.length === 0) {\n  // If no deals are returned, we can't infer the fields.\n  // We can either throw an error or return a default set of fields.\n  // Let's throw an error for now.\n  throw new Error('No deals returned, cannot infer fields.');\n}\n\nconst firstDeal = deals[0];\nconst fields = Object.keys(firstDeal).map(key => ({\n  name: key,\n  label: key\n}));\n\nreturn { json: { fields } };"
+        "jsCode": "const deals = $input.item.json.message;\n\nif (!deals || deals.length === 0) {\n  throw new Error('No deals returned, cannot infer fields.');\n}\n\nconst firstDeal = deals[0];\nconst fields = Object.keys(firstDeal).map(key => ({\n  name: key,\n  label: key\n}));\n\nreturn { json: { fields } };\n"
       },
       "name": "Parse Fields",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1600,
-        912
+        -2016,
+        224
       ],
-      "id": "97aba7ae-4284-4392-be4d-2986daf9364f"
+      "id": "5b71c7c4-909c-4a7a-8a58-a8c4469a9295"
     },
     {
       "parameters": {
@@ -126,7 +125,7 @@
         "messages": {
           "values": [
             {
-              "content": "=You are a CRM data extractor. Extract ONLY mentioned fields from transcription.\n\nText: {{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}\n\nRULES:\n- Use ONLY field names above\n- DO NOT use \"name\" field\n- Output ONLY JSON\n\nExample: {\"deal_name\": \"Project X\", \"status\": \"Open\"}"
+              "content": "={{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}"
             }
           ]
         },
@@ -137,13 +136,13 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        -1376,
-        912
+        -1792,
+        224
       ],
-      "id": "a182a721-9d14-4a37-8802-03ec8c1f1e4e",
+      "id": "a0fd9924-3b5f-422b-a8aa-1aca10b12164",
       "credentials": {
         "openAiApi": {
-          "id": "2WmDcD68ZlBMN6Sr",
+          "id": "07RiFjrpWpiDUJB6",
           "name": "OpenAi account"
         }
       }
@@ -157,10 +156,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1024,
-        912
+        -1440,
+        224
       ],
-      "id": "c8fe94a0-05e6-4493-80bf-f93d7c05fa77"
+      "id": "00096047-02d3-4e24-be95-c3118e3c1fdb"
     },
     {
       "parameters": {
@@ -178,39 +177,32 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        -800,
-        912
+        -1216,
+        224
       ],
-      "id": "28e4936a-7839-4caa-9ab7-980268796d9f"
+      "id": "80e6e9ba-dd1b-46c1-9777-3b3132623277"
     },
     {
       "parameters": {
         "authentication": "headerAuth",
         "requestMethod": "PUT",
-        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/CRM%20Deal/{{ $('Webhook').item.json.body.dealName }}",
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/CRM%20Deal/{{ $('Webhook').item.json.body.docName }}",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={{ $json.json }}",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ \"token \" + $('Webhook').item.json.body.frappeApiKey + \":\" + $('Webhook').item.json.body.frappeApiSecret }}"
-            }
-          ]
-        }
+        "bodyParametersJson": "={{ $json }}",
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Webhook').item.json.body.frappeApiKey + ':' + $('Webhook').item.json.body.frappeApiSecret }}\"\n}"
       },
       "name": "Update Deal",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        -576,
-        1008
+        -992,
+        320
       ],
-      "id": "0bd21d36-abb2-4eb2-9c53-6e70045cb509",
+      "id": "240b09c0-dfac-4c88-915a-90bfb4941153",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "QMLdwQmE0rzxBFFH",
+          "id": "usDoofPm00vuGNxF",
           "name": "Header Auth account"
         }
       }
@@ -227,23 +219,23 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        -352,
-        1008
+        -768,
+        320
       ],
-      "id": "1d8f3629-5ba1-41d6-8b65-923ef51ed8f8"
+      "id": "fb18339d-02b6-469d-a399-d64455b3635d"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const dealData = JSON.parse($input.item.json);\nconst chatId = $('Webhook').item.json.body.chatId;\n\nif (!dealData || !chatId) {\n  throw new Error('Missing dealData or chatId');\n}\n\nconst fieldsList = Object.entries(dealData)\n  .map(([key, value]) => `• *${key}:* ${value}`)\n  .join('\\n');\n\nfunction uuidv4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nconst draftId = uuidv4();\n\nconst telegramPayload = {\n  chat_id: chatId,\n  text: `*Draft Deal*\\n\\n${fieldsList || 'No data'}\\n\\nConfirm?`,\n  parse_mode: 'Markdown',\n  reply_markup: {\n    inline_keyboard: [\n      [{ text: 'Confirm', callback_data: `confirm_deal_draft:${draftId}` }],\n      [{ text: 'Cancel', callback_data: 'cancel_draft' }]\n    ]\n  },\n  draftId: draftId,\n  dealData: dealData\n};\n\nreturn { json: telegramPayload };"
+        "jsCode": "const dealData = $input.item.json;\nconst chatId = $('Webhook').item.json.body.chatId;\n\nif (!dealData || !chatId) {\n  throw new Error('Missing dealData or chatId');\n}\n\nconst fieldsList = Object.entries(dealData)\n  .map(([key, value]) => `• *${key}:* ${value}`)\n  .join('\\n');\n\nfunction uuidv4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nconst draftId = uuidv4();\n\nconst telegramPayload = {\n  chat_id: chatId,\n  text: `*Draft Deal*\\n\\n${fieldsList || 'No data'}\\n\\nConfirm?`,\n  parse_mode: 'Markdown',\n  reply_markup: {\n    inline_keyboard: [\n      [{ text: 'Confirm', callback_data: `confirm_deal_draft:${draftId}` }],\n      [{ text: 'Cancel', callback_data: 'cancel_draft' }]\n    ]\n  },\n  draftId: draftId,\n  dealData: dealData\n};\n\nreturn { json: telegramPayload };\n"
       },
-      "id": "1e4f0625-5e99-490b-b79a-644ef8fa7179",
+      "id": "3166eacb-05d7-44ec-b298-59205e9d24c2",
       "name": "Format Telegram Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -576,
-        816
+        -992,
+        128
       ]
     },
     {
@@ -254,10 +246,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -176,
-        816
+        -544,
+        128
       ],
-      "id": "c6d5840a-dde0-4059-826d-ee39021becd3",
+      "id": "b770f1b2-77d3-47f1-9038-f12c24529106",
       "name": "Build Telegram Payload"
     },
     {
@@ -282,10 +274,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        16,
-        816
+        -320,
+        128
       ],
-      "id": "7e71d3d1-2c19-4a58-abdf-e850c1ca16de",
+      "id": "92636a4b-fd9a-4f82-8daa-6ca1ba93697d",
       "name": "HTTP Request"
     },
     {
@@ -323,10 +315,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -368,
-        816
+        -768,
+        128
       ],
-      "id": "296c9f6e-153b-4757-aba8-f918d344d71d",
+      "id": "77a8bc93-c193-4bfe-a359-c72baa4b9620",
       "name": "StoreDraft Data"
     }
   ],
@@ -478,11 +470,6 @@
         ]
       ]
     },
-    "HTTP Request": {
-      "main": [
-        []
-      ]
-    },
     "StoreDraft Data": {
       "main": [
         [
@@ -495,15 +482,15 @@
       ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "1c5334dd-7876-4839-ba0c-14b371a2e61c",
+  "versionId": "0d2ed1f0-d140-4b76-835a-fbf46c398e87",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "ff704f4173ec39b158b66f039a9d69a1a97429263ff20f475877150f83b88720"
+    "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"
   },
-  "id": "oG5uPciHY2sexiVm",
+  "id": "es3EgTog8T3wA15e",
   "tags": []
 }

@@ -117,7 +117,7 @@ Need help? Just type /help!
     });
 
     // === /createtask ===
-    bot.onText(/\/createtask (.+?) (.+?)(?: (.+))?/, async (msg, match) => {
+    bot.onText(/\/createtask (\S+) (\S+)(?: (.*))?/s, async (msg, match) => {
         const chatId = msg.chat.id;
         const [, docName, taskTitle, taskDescription] = match; // Renamed leadName to docName for generality
 
