@@ -1,0 +1,88 @@
+{
+  "name": "CREATE_NOTE",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "CREATE_NOTE",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [-2720, 912],
+      "webhookId": "a1b2c3d4-e5f6-7890-1234-abcdef123456"
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "POST",
+        "url": "={{ $("Webhook").item.json.body.crmBaseUrl }}/api/resource/Note",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\n  \"title\": \"{{ $(\"Webhook\").item.json.body.noteTitle }}\",\n  \"content\": \"{{ $(\"Webhook\").item.json.body.noteContent || '' }}\",\n  \"public\": true,\n  \"reference_doctype\": \"Lead\",\n  \"reference_name\": \"{{ $(\"Webhook\").item.json.body.docName }}\"\n}",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"token \" + $(\"Webhook\").item.json.body.frappeApiKey + \":\" + $(\"Webhook\").item.json.body.frappeApiSecret }}"
+            }
+          ]
+        }
+      },
+      "name": "Create Note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [-2496, 912],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "QMLdwQmE0rzxBFFH",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot{{ $("Webhook").item.json.body.telegramBotToken }}/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\n  \"chat_id\": {{ $(\"Webhook\").item.json.body.chatId }},\n  \"text\": \"Note '{{ $(\"Webhook\").item.json.body.noteTitle }}\' created for '{{ $(\"Webhook\").item.json.body.docName }}\'!\",\n  \"parse_mode\": \"Markdown\"\n}"
+      },
+      "name": "Send Confirmation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [-2272, 912]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Create Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Note": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "oG5uPciHY2sexiVn",
+  "tags": []
+}

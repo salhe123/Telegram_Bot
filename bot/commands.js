@@ -50,7 +50,10 @@ to \`/health\` or visit: \`${process.env.RENDER_EXTERNAL_URL || "https://your-bo
 *6. Create Task*
   - \`/createtask <lead_or_deal_name> <task_title> [task_description]\`
 
-*7. Convert Lead to Deal*
+*7. Create Note*
+  - \`/createnote <lead_or_deal_name> <note_title> [note_content]\`
+
+*8. Convert Lead to Deal*
   - \`/convertlead <lead_name>\`
 
 Need help? Just type /help!
@@ -146,6 +149,39 @@ Need help? Just type /help!
         } catch (error) {
             console.error("[CREATE_TASK] ERROR:", error.response?.data || error.message);
             await bot.sendMessage(chatId, "Failed to create task. Please check n8n webhook URL and CRM details.");
+        }
+    });
+
+    // === /createnote ===
+    bot.onText(/\/createnote (\S+) (\S+)(?: (.*))?/s, async (msg, match) => {
+        const chatId = msg.chat.id;
+        const [, docName, noteTitle, noteContent] = match;
+
+        const activeCrmAlias = crmManager.getActiveCrmAlias(chatId);
+        if (!activeCrmAlias) {
+            return bot.sendMessage(chatId, "No active CRM selected. Use `/usecrm <alias>` to select one.");
+        }
+
+        const activeCrm = await crmManager.getCrm(chatId, activeCrmAlias);
+        if (!activeCrm) {
+            return bot.sendMessage(chatId, `Active CRM '${activeCrmAlias}' not found. Please use \`/usecrm <alias>\` to select a valid CRM.`);
+        }
+
+        try {
+            await axios.post(process.env.N8N_CREATE_NOTE_WEBHOOK_URL, {
+                chatId,
+                crmBaseUrl: activeCrm.url,
+                frappeApiKey: activeCrm.apiKey,
+                frappeApiSecret: activeCrm.apiSecret,
+                docName: docName.trim(),
+                noteTitle: noteTitle.trim(),
+                noteContent: noteContent ? noteContent.trim() : '',
+                telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
+            });
+            await bot.sendMessage(chatId, `Note creation request sent for '${docName.trim()}'.`);
+        } catch (error) {
+            console.error("[CREATE_NOTE] ERROR:", error.response?.data || error.message);
+            await bot.sendMessage(chatId, "Failed to create note. Please check n8n webhook URL and CRM details.");
         }
     });
 
