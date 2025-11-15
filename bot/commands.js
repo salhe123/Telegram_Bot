@@ -276,11 +276,11 @@ async function runSearch(chatId, input, doctype) {
 
         if (currentDoctype === "CRM Lead") {
             fieldsToFetch.push("first_name", "last_name");
+        } else if (currentDoctype === "CRM Deal") {
+            fieldsToFetch.push("deal_name");
         }
-        // Do NOT push "deal_name" for CRM Deal, as it causes an API error.
-        // We will rely on the 'name' field for deals.
 
-        console.log(`[SEARCH] Doctype: ${currentDoctype}, Query: ${query}, Filters: ${filters}, Page: ${page}`);
+        console.log(`[SEARCH] Doctype: ${currentDoctype}, Query: ${query}, Filters: ${JSON.stringify(filters)}, Page: ${page}`);
 
         const filtersArray = [["organization", "like", `%${query}%`]];
         if (filters.owner) filtersArray.push(["owner", "=", filters.owner]);
@@ -299,7 +299,7 @@ async function runSearch(chatId, input, doctype) {
         });
 
         // For deals, search by deal_name. For leads, keep organizational search.
-        const nameSearchField = currentDoctype === "CRM Deal" ? "organization" : "first_name";
+        const nameSearchField = currentDoctype === "CRM Deal" ? "deal_name" : "first_name";
         const nameRes = await axios.get(`${crmBaseUrl}/api/resource/${currentDoctype}`, {
             params: {
                 filters: JSON.stringify([[nameSearchField, "like", `%${query}%`]]),

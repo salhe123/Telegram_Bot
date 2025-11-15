@@ -106,7 +106,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const docFields = $input.item.json.data;\n\nif (!docFields || docFields.length === 0) {\n  throw new Error('No DocFields data returned');\n}\n\nconst allowedFieldTypes = ['Data', 'Text', 'Small Text', 'Long Text', 'Int', 'Float', 'Currency', 'Check', 'Date', 'Datetime', 'Time', 'Select', 'Link', 'Email', 'Phone', 'URL'];\n\nconst fields = docFields\n  .filter(field => field.fieldname && field.label && !field.hidden && !field.read_only && allowedFieldTypes.includes(field.fieldtype))\n  .map(field => ({\n    name: field.fieldname,\n    label: field.label\n  }));\n\nreturn { json: { fields } };"
+        "jsCode": "const deals = $input.item.json.message;\n\nif (!deals || deals.length === 0) {\n  // If no deals are returned, we can't infer the fields.\n  // We can either throw an error or return a default set of fields.\n  // Let's throw an error for now.\n  throw new Error('No deals returned, cannot infer fields.');\n}\n\nconst firstDeal = deals[0];\nconst fields = Object.keys(firstDeal).map(key => ({\n  name: key,\n  label: key\n}));\n\nreturn { json: { fields } };"
       },
       "name": "Parse Fields",
       "type": "n8n-nodes-base.code",
@@ -190,7 +190,7 @@
         "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/CRM%20Deal/{{ $('Webhook').item.json.body.dealName }}",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={{ $json }}",
+        "bodyParametersJson": "={{ $json.json }}",
         "headerParameters": {
           "parameters": [
             {

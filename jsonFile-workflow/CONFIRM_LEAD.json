@@ -104,7 +104,7 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": \"{{ $('Wait for Confirmation1').item.json.body.chatId }}\",\n  \"text\": \"Lead created! View here: {{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}/app/lead/{{ $('Create Lead1').item.json.body.data.name || 'unknown' }}\",\n  \"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "={\n  \"chat_id\": \"{{ $('Wait for Confirmation1').item.json.body.chatId }}\",\n  \"text\": \"Lead created! View here: {{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}/app/crm-lead/view/list?name=%5B%22like%22%2C%22%25{{ $('Create Lead1').item.json.body.data.name || 'unknown' }}%25%22%5D\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
       "name": "Send CRM Link1",
       "type": "n8n-nodes-base.httpRequest",

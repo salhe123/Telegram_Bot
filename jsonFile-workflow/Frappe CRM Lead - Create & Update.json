@@ -190,7 +190,7 @@
         "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/CRM%20Lead/{{ $('Webhook').item.json.body.leadName }}",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={{ $json }}",
+        "bodyParametersJson": "={{ $json.json }}",
         "headerParameters": {
           "parameters": [
             {
