@@ -1,6 +1,7 @@
 const axios = require("axios");
 const bot = require("./telegram");
 const crmManager = require("./crm_manager");
+const { getFrappeApiKeys } = require("../config/crmApiKeys"); // Import directly
 
 // Define states for the multi-step login process
 const LOGIN_STATE = {
@@ -158,7 +159,7 @@ Need help? Just type /help!
                 try {
                     const isAuthenticated = await crmManager.authenticateUser(loginAlias, loginUsername, password);
                     if (isAuthenticated) {
-                        const crmDetails = crmManager.getFrappeApiKeys(loginAlias); // Get URL from secure config
+                        const crmDetails = getFrappeApiKeys(loginAlias); // Corrected: Call getFrappeApiKeys directly
                         if (crmDetails) {
                             await crmManager.addAuthenticatedCrm(chatId, loginAlias, crmDetails.url);
                             crmManager.setActiveCrmAlias(chatId, loginAlias);
