@@ -10,17 +10,17 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -656,
-        272
+        -672,
+        96
       ],
-      "id": "4fd0a7ce-3194-4c7e-9016-c4109180b761",
+      "id": "a785f8ea-a7c5-491d-9eb4-d43ef9b1106b",
       "name": "Wait for Confirmation1",
       "webhookId": "f69f5152-6e49-41f0-a5a2-9424e8e4310e"
     },
     {
       "parameters": {
         "dataType": "string",
-        "value1": "={{ ($json.dealData.deal_name || '').trim() }}",
+        "value1": "={{ ($json.dealData.name || '').trim() }}",
         "rules": {
           "rules": [
             {
@@ -39,10 +39,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
       "position": [
-        -208,
-        240
+        -224,
+        64
       ],
-      "id": "dc79b0d1-a97c-4b93-b8c1-c8a80997194a"
+      "id": "e91fc7c7-ff9f-45d4-a695-57a25b341396"
     },
     {
       "parameters": {
@@ -50,16 +50,16 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": $json.chatId,\n  \"text\": \"Please provide a *Deal Name* to create the deal it is mandatory so Record again please!\"\n}"
+        "bodyParametersJson": "={{ { \"chat_id\": $json.chatId, \"text\": \"Please provide a *Deal Name* to create the deal it is mandatory so Record again please!\" } }}"
       },
       "name": "Prompt User1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        16,
-        368
+        0,
+        192
       ],
-      "id": "a600b3fa-0ec0-4a4a-a968-174d63880998"
+      "id": "41dd8962-1540-46c9-a7ec-cbc5e4ffd478"
     },
     {
       "parameters": {
@@ -71,29 +71,22 @@
           "fullResponse": true
         },
         "bodyParametersJson": "={{ $json.dealData }}",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ \"token \" + $('Wait for Confirmation1').item.json.body.frappeApiKey + \":\" + $('Wait for Confirmation1').item.json.body.frappeApiSecret }}"
-            }
-          ]
-        }
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation1').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation1').item.json.body.frappeApiSecret }}\"\n}"
       },
       "name": "Create Deal1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        16,
-        176
+        0,
+        0
       ],
-      "id": "4af39f04-87f4-4735-ab7c-feb9c1c379d8",
+      "id": "e8da5385-0f33-42a2-8e5f-01989cb7d407",
       "alwaysOutputData": false,
       "executeOnce": false,
       "retryOnFail": false,
       "credentials": {
         "httpHeaderAuth": {
-          "id": "QMLdwQmE0rzxBFFH",
+          "id": "usDoofPm00vuGNxF",
           "name": "Header Auth account"
         }
       }
@@ -104,16 +97,16 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": \"{{ $('Wait for Confirmation1').item.json.body.chatId }}\",\n  \"text\": \"Deal created! View here: {{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}/app/crm-deal/view/list?name=%5B%22like%22%2C%22%25{{ $('Create Deal1').item.json.body.data.name || 'unknown' }}%25%22%5D\",\n  \"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "={\n  \"chat_id\": \"{{ $('Wait for Confirmation1').item.json.body.chatId }}\",\n  \"text\": \"Deal created! View here: {{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}/crm/deals/{{ $('Create Deal1').item.json.body.data.name || 'unknown' }}#activity\",\n  \"parse_mode\": \"Markdown\"\n}\n"
       },
       "name": "Send CRM Link1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        240,
-        176
+        224,
+        0
       ],
-      "id": "e8ee4517-5368-4cbf-96cf-4861345dd99a"
+      "id": "55d6d9c7-9a8d-4413-99e7-a3c8c32d5081"
     },
     {
       "parameters": {
@@ -123,10 +116,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -432,
-        272
+        -448,
+        96
       ],
-      "id": "f2c00e56-f804-44c0-8f37-a9a0684b59e9",
+      "id": "5dfb065f-1a24-4937-8ee6-d8bb0eefd8f0",
       "name": "dealData"
     }
   ],
@@ -184,15 +177,15 @@
       ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "c8277b1a-26ef-42cc-97c5-0281d0bf4c28",
+  "versionId": "809425c1-10be-4b67-9abd-2b23797b20e7",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "ff704f4173ec39b158b66f039a9d69a1a97429263ff20f475877150f83b88720"
+    "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"
   },
-  "id": "PFF9KcfBqLKR0WXW",
+  "id": "YLDuL4KIoUFHe8ju",
   "tags": []
 }

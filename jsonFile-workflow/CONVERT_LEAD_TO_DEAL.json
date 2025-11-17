@@ -11,10 +11,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        -2720,
-        912
+        0,
+        0
       ],
-      "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      "id": "a0e7bb25-a43a-45c3-89d8-8b1e79548da0",
       "webhookId": "f0e9d8c7-b6a5-4321-fedc-ba9876543210"
     },
     {
@@ -24,27 +24,19 @@
         "url": "={{ $(\"Webhook\").item.json.body.crmBaseUrl }}/api/method/frappe.crm.doctype.lead.lead.convert_lead",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "{\n  \"lead\": \"{{ $(\"Webhook\").item.json.body.leadName }}\"\n}",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ \"token \" + $(\"Webhook\").item.json.body.frappeApiKey + \":\" + $(\"Webhook\").item.json.body.frappeApiSecret }}"
-            }
-          ]
-        }
+        "bodyParametersJson": "={{ { \"lead\": $(\"Webhook\").item.json.body.leadName } }}"
       },
       "name": "Convert Lead",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        -2496,
-        912
+        224,
+        0
       ],
-      "id": "1a2b3c4d-5e6f-7890-abcd-ef1234567890",
+      "id": "9ba75c69-84b6-4c54-88ef-2c13021571b2",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "QMLdwQmE0rzxBFFH",
+          "id": "usDoofPm00vuGNxF",
           "name": "Header Auth account"
         }
       }
@@ -56,27 +48,19 @@
         "url": "={{ $(\"Webhook\").item.json.body.crmBaseUrl }}/api/resource/Lead/{{ $(\"Webhook\").item.json.body.leadName }}",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "{\n  \"status\": \"Converted\"\n}",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ \"token \" + $(\"Webhook\").item.json.body.frappeApiKey + \":\" + $(\"Webhook\").item.json.body.frappeApiSecret }}"
-            }
-          ]
-        }
+        "bodyParametersJson": "{\n  \"status\": \"Converted\"\n}"
       },
       "name": "Update Lead Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        -2272,
-        912
+        448,
+        0
       ],
-      "id": "98765432-10fe-dcba-9876-543210fedcba",
+      "id": "9489a3f4-e631-4890-94ad-e8defb344d01",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "QMLdwQmE0rzxBFFH",
+          "id": "usDoofPm00vuGNxF",
           "name": "Header Auth account"
         }
       }
@@ -93,12 +77,13 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        -2048,
-        912
+        672,
+        0
       ],
-      "id": "cba98765-4321-0fed-cba9-876543210fed"
+      "id": "b4b31d8c-945a-4819-99d3-5dd176a04971"
     }
   ],
+  "pinData": {},
   "connections": {
     "Webhook": {
       "main": [
@@ -134,15 +119,15 @@
       ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "1c5334dd-7876-4839-ba0c-14b371a2e61c",
+  "versionId": "2a93f596-26d3-4b27-be60-f9373d631076",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "ff704f4173ec39b158b66f039a9d69a1a97429263ff20f475877150f83b88720"
+    "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"
   },
-  "id": "oG5uPciHY2sexiVm",
+  "id": "9B3i436QPII2p0IW",
   "tags": []
 }

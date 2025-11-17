@@ -11,10 +11,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        -2720,
-        912
+        -9344,
+        1312
       ],
-      "id": "50cd8aa4-d9fe-431a-9316-18f0a852367a",
+      "id": "9a7aadba-5e9b-4e50-887a-1c14dd51dd74",
       "webhookId": "e9b800f0-c8b5-49e3-a80f-84d603f52d4d"
     },
     {
@@ -32,10 +32,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        -2496,
-        912
+        -9120,
+        1328
       ],
-      "id": "cf0dda4f-9ab8-4517-a1f9-960dab819927"
+      "id": "202c77d1-2ce3-4775-8723-35bb5db32109"
     },
     {
       "parameters": {
@@ -47,10 +47,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        -2272,
-        912
+        -8896,
+        1312
       ],
-      "id": "f2881113-bfec-4d45-a8a6-7c39458a326c"
+      "id": "24301204-f2dc-46bf-8130-6220ea4e2e18"
     },
     {
       "parameters": {
@@ -62,28 +62,26 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        -2048,
-        912
+        -8672,
+        1312
       ],
-      "id": "8466272e-2d0e-473b-90af-ffc9db8735ae",
+      "id": "e07c8db5-40bf-4436-9e61-c00238be2426",
       "credentials": {
         "openAiApi": {
-          "id": "2WmDcD68ZlBMN6Sr",
+          "id": "07RiFjrpWpiDUJB6",
           "name": "OpenAi account"
         }
       }
     },
     {
       "parameters": {
-        "authentication": "headerAuth",
-        "requestMethod": "GET",
-        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/DocField?filters=[[\"parent\",\"=\",\"CRM Lead\"]]",
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/method/frappe.client.get_list?doctype=CRM%20Lead&fields=%5B%22*%22%5D",
         "options": {},
-        "headerParameters": {
-          "parameters": [
+        "headerParametersUi": {
+          "parameter": [
             {
               "name": "Authorization",
-              "value": "={{ \"token \" + $('Webhook').item.json.body.frappeApiKey + \":\" + $('Webhook').item.json.body.frappeApiSecret }}"
+              "value": "=token {{ $('Webhook').item.json.body.frappeApiKey }}:{{ $('Webhook').item.json.body.frappeApiSecret }}"
             }
           ]
         }
@@ -92,30 +90,24 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        -1824,
-        912
+        -8448,
+        1312
       ],
-      "id": "52425f8b-50ba-41fa-a6cb-10270cd31c2d",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "QMLdwQmE0rzxBFFH",
-          "name": "Header Auth account"
-        }
-      }
+      "id": "42c2192a-ca91-431a-a457-76fb75b528bf"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const docFields = $input.item.json.data;\n\nif (!docFields || docFields.length === 0) {\n  throw new Error('No DocFields data returned');\n}\n\nconst allowedFieldTypes = ['Data', 'Text', 'Small Text', 'Long Text', 'Int', 'Float', 'Currency', 'Check', 'Date', 'Datetime', 'Time', 'Select', 'Link', 'Email', 'Phone', 'URL'];\n\nconst fields = docFields\n  .filter(field => field.fieldname && field.label && !field.hidden && !field.read_only && allowedFieldTypes.includes(field.fieldtype))\n  .map(field => ({\n    name: field.fieldname,\n    label: field.label\n  }));\n\nreturn { json: { fields } };"
+        "jsCode": "const docFields = $input.item.json.message;\nif (!docFields || docFields.length === 0) {\n  throw new Error('No message data returned');\n}\n\nconst firstRecord = docFields[0];\nconst fields = Object.keys(firstRecord).map(key => ({\n  name: key,\n  label: key\n}));\n\nreturn { json: { fields } };"
       },
       "name": "Parse Fields",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1600,
-        912
+        -8224,
+        1312
       ],
-      "id": "97aba7ae-4284-4392-be4d-2986daf9364f"
+      "id": "52344977-530e-4e85-be48-5e59388f5552"
     },
     {
       "parameters": {
@@ -137,13 +129,13 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        -1376,
-        912
+        -8000,
+        1312
       ],
-      "id": "a182a721-9d14-4a37-8802-03ec8c1f1e4e",
+      "id": "561b1bab-8809-4ffd-a362-1747d4d027e9",
       "credentials": {
         "openAiApi": {
-          "id": "2WmDcD68ZlBMN6Sr",
+          "id": "07RiFjrpWpiDUJB6",
           "name": "OpenAi account"
         }
       }
@@ -157,10 +149,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1024,
-        912
+        -7648,
+        1312
       ],
-      "id": "c8fe94a0-05e6-4493-80bf-f93d7c05fa77"
+      "id": "0ed380d6-351e-4250-af71-80ba5080c154"
     },
     {
       "parameters": {
@@ -178,39 +170,32 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        -800,
-        912
+        -7424,
+        1312
       ],
-      "id": "28e4936a-7839-4caa-9ab7-980268796d9f"
+      "id": "7a1a5fee-84d7-4be4-ae80-688e694b7df6"
     },
     {
       "parameters": {
         "authentication": "headerAuth",
         "requestMethod": "PUT",
-        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/CRM%20Lead/{{ $('Webhook').item.json.body.leadName }}",
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/CRM%20Lead/{{ $('Webhook').item.json.body.docName }}",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={{ $json.json }}",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ \"token \" + $('Webhook').item.json.body.frappeApiKey + \":\" + $('Webhook').item.json.body.frappeApiSecret }}"
-            }
-          ]
-        }
+        "bodyParametersJson": "={{ $json }}",
+        "headerParametersJson": "={\n  \"Authorization\": \"token {{ $('Webhook').item.json.body.frappeApiKey }}:{{ $('Webhook').item.json.body.frappeApiSecret }}\"\n}"
       },
       "name": "Update Lead",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        -576,
-        1008
+        -7200,
+        1408
       ],
-      "id": "0bd21d36-abb2-4eb2-9c53-6e70045cb509",
+      "id": "4882a311-a848-4050-a520-d3ea35a3dd37",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "QMLdwQmE0rzxBFFH",
+          "id": "usDoofPm00vuGNxF",
           "name": "Header Auth account"
         }
       }
@@ -221,29 +206,29 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": {{ $('Webhook').item.json.body.chatId }},\n  \"text\": \"Lead updated! View: {{ $('Webhook').item.json.body.crmBaseUrl }}/app/lead/{{ $json.data.name }}\",\n  \"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $('Webhook').item.json.body.chatId }},\n  \"text\": \"Lead updated! View: {{ $('Webhook').item.json.body.crmBaseUrl + '/app/lead/' + ($json.data.name || 'unknown') }}\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
       "name": "Send Update Link",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        -352,
-        1008
+        -6976,
+        1408
       ],
-      "id": "1d8f3629-5ba1-41d6-8b65-923ef51ed8f8"
+      "id": "375b79ba-fa67-4614-b4f2-80c17de90856"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const leadData = $input.item.json;\nconst chatId = $('Webhook').item.json.body.chatId;\n\nif (!leadData || !chatId) {\n  throw new Error('Missing leadData or chatId');\n}\n\n// MAP AI \"name\" → CRM \"first_name\"\nif (leadData.name) {\n  leadData.first_name = leadData.name;\n  delete leadData.name;\n}\n\nconst fieldsList = Object.entries(leadData)\n  .map(([key, value]) => `• *${key}:* ${value}`)\n  .join('\\n');\n\nfunction uuidv4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nconst draftId = uuidv4();\n\nconst telegramPayload = {\n  chat_id: chatId,\n  text: `*Draft Lead*\\n\\n${fieldsList || 'No data'}\\n\\nConfirm?`,\n  parse_mode: 'Markdown',\n  reply_markup: {\n    inline_keyboard: [\n      [{ text: 'Confirm', callback_data: `confirm_draft:${draftId}` }],\n      [{ text: 'Cancel', callback_data: 'cancel_draft' }]\n    ]\n  },\n  draftId: draftId,\n  leadData: leadData  // now has first_name\n};\n\nreturn { json: telegramPayload };"
       },
-      "id": "1e4f0625-5e99-490b-b79a-644ef8fa7179",
+      "id": "75abbcbd-e69b-4706-be1b-fb51bb835354",
       "name": "Format Telegram Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -576,
-        816
+        -7200,
+        1216
       ]
     },
     {
@@ -254,10 +239,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -176,
-        816
+        -6752,
+        1216
       ],
-      "id": "c6d5840a-dde0-4059-826d-ee39021becd3",
+      "id": "e870efa4-c0f3-442e-9afe-bcc369354c9d",
       "name": "Build Telegram Payload"
     },
     {
@@ -282,10 +267,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        16,
-        816
+        -6528,
+        1216
       ],
-      "id": "7e71d3d1-2c19-4a58-abdf-e850c1ca16de",
+      "id": "bf2241d1-31ff-465a-929e-aa5358ac4f77",
       "name": "HTTP Request"
     },
     {
@@ -323,11 +308,1775 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -368,
-        816
+        -6976,
+        1216
       ],
-      "id": "296c9f6e-153b-4757-aba8-f918d344d71d",
+      "id": "7e45c535-e260-4f46-985b-4c00fb2c0cd8",
       "name": "StoreDraft Data"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "VOICE_LEAD_TRIGGER",
+        "options": {}
+      },
+      "name": "Webhook1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -9344,
+        1312
+      ],
+      "id": "9a7aadba-5e9b-4e50-887a-1c14dd51dd74",
+      "webhookId": "e9b800f0-c8b5-49e3-a80f-84d603f52d4d"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.body.isUpdate }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Is Update?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -9120,
+        1312
+      ],
+      "id": "202c77d1-2ce3-4775-8723-35bb5db32109"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.fileUrl }}",
+        "responseFormat": "file",
+        "options": {}
+      },
+      "name": "Download Audio1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -8896,
+        1312
+      ],
+      "id": "24301204-f2dc-46bf-8130-6220ea4e2e18"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "name": "Transcribe Audio1",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -8672,
+        1312
+      ],
+      "id": "e07c8db5-40bf-4436-9e61-c00238be2426",
+      "credentials": {
+        "openAiApi": {
+          "id": "07RiFjrpWpiDUJB6",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/DocField?filters=[[\"parent\",\"=\",\"CRM Lead\"]]",
+        "options": {}
+      },
+      "name": "Get Lead Fields1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -8448,
+        1312
+      ],
+      "id": "42c2192a-ca91-431a-a457-76fb75b528bf"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const docFields = $input.item.json.data;\n\nif (!docFields || docFields.length === 0) {\n  throw new Error('No DocFields data returned');\n}\n\nconst allowedFieldTypes = ['Data', 'Text', 'Small Text', 'Long Text', 'Int', 'Float', 'Currency', 'Check', 'Date', 'Datetime', 'Time', 'Select', 'Link', 'Email', 'Phone', 'URL'];\n\nconst fields = docFields\n  .filter(field => field.fieldname && field.label && !field.hidden && !field.read_only && allowedFieldTypes.includes(field.fieldtype))\n  .map(field => ({\n    name: field.fieldname,\n    label: field.label\n  }));\n\nreturn { json: { fields } };"
+      },
+      "name": "Parse Fields1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -8224,
+        1312
+      ],
+      "id": "52344977-530e-4e85-be48-5e59388f5552"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a CRM data extractor. Extract ONLY mentioned fields from transcription.\n\nText: {{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}\n\nRULES:\n- Use ONLY field names above\n- DO NOT use \"name\" field\n- Split full name into first_name and last_name if mentioned\n- Output ONLY JSON\n\nExample: {\"first_name\": \"John\", \"last_name\": \"Doe\", \"email\": \"john@gmail.com\"}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "name": "Parse to JSON1",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -8000,
+        1312
+      ],
+      "id": "561b1bab-8809-4ffd-a362-1747d4d027e9",
+      "credentials": {
+        "openAiApi": {
+          "id": "07RiFjrpWpiDUJB6",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: $input.item.json.message.content };"
+      },
+      "name": "Extract Lead Data1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7648,
+        1312
+      ],
+      "id": "0ed380d6-351e-4250-af71-80ba5080c154"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('Webhook').item.json.body.isUpdate }}",
+              "operation": "notEqual",
+              "value2": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "name": "Is Create?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -7424,
+        1312
+      ],
+      "id": "7a1a5fee-84d7-4be4-ae80-688e694b7df6"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/CRM%20Lead/{{ $('Webhook').item.json.body.leadName }}",
+        "options": {}
+      },
+      "name": "Update Lead1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -7200,
+        1408
+      ],
+      "id": "4882a311-a848-4050-a520-d3ea35a3dd37"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $('Webhook').item.json.body.chatId }},\n  \"text\": \"Lead updated! View: {{ $('Webhook').item.json.body.crmBaseUrl }}/app/lead/{{ $json.data.name }}\",\n  \"parse_mode\": \"Markdown\"\n}"
+      },
+      "name": "Send Update Link1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -6976,
+        1408
+      ],
+      "id": "375b79ba-fa67-4614-b4f2-80c17de90856"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const leadData = $input.item.json;\nconst chatId = $('Webhook').item.json.body.chatId;\n\nif (!leadData || !chatId) {\n  throw new Error('Missing leadData or chatId');\n}\n\n// MAP AI \"name\" → CRM \"first_name\"\nif (leadData.name) {\n  leadData.first_name = leadData.name;\n  delete leadData.name;\n}\n\nconst fieldsList = Object.entries(leadData)\n  .map(([key, value]) => `• *${key}:* ${value}`)\n  .join('\\n');\n\nfunction uuidv4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nconst draftId = uuidv4();\n\nconst telegramPayload = {\n  chat_id: chatId,\n  text: `*Draft Lead*\\n\\n${fieldsList || 'No data'}\\n\\nConfirm?`,\n  parse_mode: 'Markdown',\n  reply_markup: {\n    inline_keyboard: [\n      [{ text: 'Confirm', callback_data: `confirm_draft:${draftId}` }],\n      [{ text: 'Cancel', callback_data: 'cancel_draft' }]\n    ]\n  },\n  draftId: draftId,\n  leadData: leadData  // now has first_name\n};\n\nreturn { json: telegramPayload };"
+      },
+      "id": "75abbcbd-e69b-4706-be1b-fb51bb835354",
+      "name": "Format Telegram Message1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7200,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "let leadData = {};\nif ($json.leadData) {\n  leadData = typeof $json.leadData === 'string'\n    ? JSON.parse($json.leadData)\n    : $json.leadData;\n}\n\nconst draftId = $json.draftId;\nconst chatId = $json.chat_id;\nconst crmBaseUrl = $('Webhook').item.json.body.crmBaseUrl;\n\nconst pretty = Object.entries(leadData)\n  .map(([k, v]) => {\n    const label = k.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');\n    return `• *${label}:* ${v || '—'}`;\n  })\n  .join('\\n');\n\nreturn {\n  json: {\n    chat_id: chatId,\n    text: `*Draft Lead*\\n\\n${pretty}\\n\\nConfirm?\\n\\n(draftId: \\`${draftId}\\`)`,\n    parse_mode: \"Markdown\",\n    reply_markup: {\n      inline_keyboard: [\n        [\n          {\n            text: \"Confirm\",\n            callback_data: `confirm_draft:${draftId}`\n          },\n          {\n            text: \"Cancel\",\n            callback_data: \"cancel_draft\"\n          }\n        ]\n      ]\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6752,
+        1216
+      ],
+      "id": "e870efa4-c0f3-442e-9afe-bcc369354c9d",
+      "name": "Build Telegram Payload1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "=application/json",
+        "body": "={{\n{\n  chat_id: $json.chat_id,\n  text: $json.text,\n  parse_mode: \"Markdown\",\n  crmBaseUrl: $json.crmBaseUrl ,\n  reply_markup: $json.reply_markup\n\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -6528,
+        1216
+      ],
+      "id": "bf2241d1-31ff-465a-929e-aa5358ac4f77",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9961b5cb-a7d8-4c43-91ff-33d03caa2558",
+              "name": "draftId",
+              "value": "={{ $json.draftId }}",
+              "type": "string"
+            },
+            {
+              "id": "82d5bad4-fe54-485f-aa8c-b187e0776bea",
+              "name": "leadData",
+              "value": "={{ $json.leadData }}",
+              "type": "object"
+            },
+            {
+              "id": "fa0812b6-2433-4636-ab10-68c0885034c1",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "number"
+            },
+            {
+              "id": "caff8b8f-a8f3-4a58-beda-c28dac64c25a",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -6976,
+        1216
+      ],
+      "id": "7e45c535-e260-4f46-985b-4c00fb2c0cd8",
+      "name": "StoreDraft Data1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "VOICE_LEAD_TRIGGER",
+        "options": {}
+      },
+      "name": "Webhook2",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -9344,
+        1312
+      ],
+      "id": "9a7aadba-5e9b-4e50-887a-1c14dd51dd74",
+      "webhookId": "e9b800f0-c8b5-49e3-a80f-84d603f52d4d"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.body.isUpdate }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Is Update?2",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -9120,
+        1312
+      ],
+      "id": "202c77d1-2ce3-4775-8723-35bb5db32109"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.fileUrl }}",
+        "responseFormat": "file",
+        "options": {}
+      },
+      "name": "Download Audio2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -8896,
+        1312
+      ],
+      "id": "24301204-f2dc-46bf-8130-6220ea4e2e18"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "name": "Transcribe Audio2",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -8672,
+        1312
+      ],
+      "id": "e07c8db5-40bf-4436-9e61-c00238be2426",
+      "credentials": {
+        "openAiApi": {
+          "id": "07RiFjrpWpiDUJB6",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/method/frappe.client.get_list",
+        "options": {}
+      },
+      "name": "Get Lead Fields2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -8448,
+        1312
+      ],
+      "id": "42c2192a-ca91-431a-a457-76fb75b528bf"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const docFields = $input.item.json.data;\n\nif (!docFields || docFields.length === 0) {\n  throw new Error('No DocFields data returned');\n}\n\nconst allowedFieldTypes = ['Data', 'Text', 'Small Text', 'Long Text', 'Int', 'Float', 'Currency', 'Check', 'Date', 'Datetime', 'Time', 'Select', 'Link', 'Email', 'Phone', 'URL'];\n\nconst fields = docFields\n  .filter(field => field.fieldname && field.label && !field.hidden && !field.read_only && allowedFieldTypes.includes(field.fieldtype))\n  .map(field => ({\n    name: field.fieldname,\n    label: field.label\n  }));\n\nreturn { json: { fields } };"
+      },
+      "name": "Parse Fields2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -8224,
+        1312
+      ],
+      "id": "52344977-530e-4e85-be48-5e59388f5552"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a CRM data extractor. Extract ONLY mentioned fields from transcription.\n\nText: {{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}\n\nRULES:\n- Use ONLY field names above\n- DO NOT use \"name\" field\n- Split full name into first_name and last_name if mentioned\n- Output ONLY JSON\n\nExample: {\"first_name\": \"John\", \"last_name\": \"Doe\", \"email\": \"john@gmail.com\"}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "name": "Parse to JSON2",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -8000,
+        1312
+      ],
+      "id": "561b1bab-8809-4ffd-a362-1747d4d027e9",
+      "credentials": {
+        "openAiApi": {
+          "id": "07RiFjrpWpiDUJB6",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: $input.item.json.message.content };"
+      },
+      "name": "Extract Lead Data2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7648,
+        1312
+      ],
+      "id": "0ed380d6-351e-4250-af71-80ba5080c154"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('Webhook').item.json.body.isUpdate }}",
+              "operation": "notEqual",
+              "value2": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "name": "Is Create?2",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -7424,
+        1312
+      ],
+      "id": "7a1a5fee-84d7-4be4-ae80-688e694b7df6"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/CRM%20Lead/{{ $('Webhook').item.json.body.leadName }}",
+        "options": {}
+      },
+      "name": "Update Lead2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -7200,
+        1408
+      ],
+      "id": "4882a311-a848-4050-a520-d3ea35a3dd37"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $('Webhook').item.json.body.chatId }},\n  \"text\": \"Lead updated! View: {{ $('Webhook').item.json.body.crmBaseUrl }}/app/lead/{{ $json.data.name }}\",\n  \"parse_mode\": \"Markdown\"\n}"
+      },
+      "name": "Send Update Link2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -6976,
+        1408
+      ],
+      "id": "375b79ba-fa67-4614-b4f2-80c17de90856"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const leadData = $input.item.json;\nconst chatId = $('Webhook').item.json.body.chatId;\n\nif (!leadData || !chatId) {\n  throw new Error('Missing leadData or chatId');\n}\n\n// MAP AI \"name\" → CRM \"first_name\"\nif (leadData.name) {\n  leadData.first_name = leadData.name;\n  delete leadData.name;\n}\n\nconst fieldsList = Object.entries(leadData)\n  .map(([key, value]) => `• *${key}:* ${value}`)\n  .join('\\n');\n\nfunction uuidv4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nconst draftId = uuidv4();\n\nconst telegramPayload = {\n  chat_id: chatId,\n  text: `*Draft Lead*\\n\\n${fieldsList || 'No data'}\\n\\nConfirm?`,\n  parse_mode: 'Markdown',\n  reply_markup: {\n    inline_keyboard: [\n      [{ text: 'Confirm', callback_data: `confirm_draft:${draftId}` }],\n      [{ text: 'Cancel', callback_data: 'cancel_draft' }]\n    ]\n  },\n  draftId: draftId,\n  leadData: leadData  // now has first_name\n};\n\nreturn { json: telegramPayload };"
+      },
+      "id": "75abbcbd-e69b-4706-be1b-fb51bb835354",
+      "name": "Format Telegram Message2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7200,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "let leadData = {};\nif ($json.leadData) {\n  leadData = typeof $json.leadData === 'string'\n    ? JSON.parse($json.leadData)\n    : $json.leadData;\n}\n\nconst draftId = $json.draftId;\nconst chatId = $json.chat_id;\nconst crmBaseUrl = $('Webhook').item.json.body.crmBaseUrl;\n\nconst pretty = Object.entries(leadData)\n  .map(([k, v]) => {\n    const label = k.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');\n    return `• *${label}:* ${v || '—'}`;\n  })\n  .join('\\n');\n\nreturn {\n  json: {\n    chat_id: chatId,\n    text: `*Draft Lead*\\n\\n${pretty}\\n\\nConfirm?\\n\\n(draftId: \\`${draftId}\\`)`,\n    parse_mode: \"Markdown\",\n    reply_markup: {\n      inline_keyboard: [\n        [\n          {\n            text: \"Confirm\",\n            callback_data: `confirm_draft:${draftId}`\n          },\n          {\n            text: \"Cancel\",\n            callback_data: \"cancel_draft\"\n          }\n        ]\n      ]\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6752,
+        1216
+      ],
+      "id": "e870efa4-c0f3-442e-9afe-bcc369354c9d",
+      "name": "Build Telegram Payload2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "=application/json",
+        "body": "={{\n{\n  chat_id: $json.chat_id,\n  text: $json.text,\n  parse_mode: \"Markdown\",\n  crmBaseUrl: $json.crmBaseUrl ,\n  reply_markup: $json.reply_markup\n\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -6528,
+        1216
+      ],
+      "id": "bf2241d1-31ff-465a-929e-aa5358ac4f77",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9961b5cb-a7d8-4c43-91ff-33d03caa2558",
+              "name": "draftId",
+              "value": "={{ $json.draftId }}",
+              "type": "string"
+            },
+            {
+              "id": "82d5bad4-fe54-485f-aa8c-b187e0776bea",
+              "name": "leadData",
+              "value": "={{ $json.leadData }}",
+              "type": "object"
+            },
+            {
+              "id": "fa0812b6-2433-4636-ab10-68c0885034c1",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "number"
+            },
+            {
+              "id": "caff8b8f-a8f3-4a58-beda-c28dac64c25a",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -6976,
+        1216
+      ],
+      "id": "7e45c535-e260-4f46-985b-4c00fb2c0cd8",
+      "name": "StoreDraft Data2"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "VOICE_LEAD_TRIGGER",
+        "options": {}
+      },
+      "name": "Webhook3",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -9344,
+        1312
+      ],
+      "id": "9a7aadba-5e9b-4e50-887a-1c14dd51dd74",
+      "webhookId": "e9b800f0-c8b5-49e3-a80f-84d603f52d4d"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.body.isUpdate }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Is Update?3",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -9120,
+        1312
+      ],
+      "id": "202c77d1-2ce3-4775-8723-35bb5db32109"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.fileUrl }}",
+        "responseFormat": "file",
+        "options": {}
+      },
+      "name": "Download Audio3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -8896,
+        1312
+      ],
+      "id": "24301204-f2dc-46bf-8130-6220ea4e2e18"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "name": "Transcribe Audio3",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -8672,
+        1312
+      ],
+      "id": "e07c8db5-40bf-4436-9e61-c00238be2426",
+      "credentials": {
+        "openAiApi": {
+          "id": "07RiFjrpWpiDUJB6",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/method/frappe.client.get_list",
+        "options": {}
+      },
+      "name": "Get Lead Fields3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -8448,
+        1312
+      ],
+      "id": "42c2192a-ca91-431a-a457-76fb75b528bf"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const docFields = $input.item.json.data;\n\nif (!docFields || docFields.length === 0) {\n  throw new Error('No DocFields data returned');\n}\n\nconst allowedFieldTypes = ['Data', 'Text', 'Small Text', 'Long Text', 'Int', 'Float', 'Currency', 'Check', 'Date', 'Datetime', 'Time', 'Select', 'Link', 'Email', 'Phone', 'URL'];\n\nconst fields = docFields\n  .filter(field => field.fieldname && field.label && !field.hidden && !field.read_only && allowedFieldTypes.includes(field.fieldtype))\n  .map(field => ({\n    name: field.fieldname,\n    label: field.label\n  }));\n\nreturn { json: { fields } };"
+      },
+      "name": "Parse Fields3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -8224,
+        1312
+      ],
+      "id": "52344977-530e-4e85-be48-5e59388f5552"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a CRM data extractor. Extract ONLY mentioned fields from transcription.\n\nText: {{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}\n\nRULES:\n- Use ONLY field names above\n- DO NOT use \"name\" field\n- Split full name into first_name and last_name if mentioned\n- Output ONLY JSON\n\nExample: {\"first_name\": \"John\", \"last_name\": \"Doe\", \"email\": \"john@gmail.com\"}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "name": "Parse to JSON3",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -8000,
+        1312
+      ],
+      "id": "561b1bab-8809-4ffd-a362-1747d4d027e9",
+      "credentials": {
+        "openAiApi": {
+          "id": "07RiFjrpWpiDUJB6",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: $input.item.json.message.content };"
+      },
+      "name": "Extract Lead Data3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7648,
+        1312
+      ],
+      "id": "0ed380d6-351e-4250-af71-80ba5080c154"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('Webhook').item.json.body.isUpdate }}",
+              "operation": "notEqual",
+              "value2": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "name": "Is Create?3",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -7424,
+        1312
+      ],
+      "id": "7a1a5fee-84d7-4be4-ae80-688e694b7df6"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/CRM%20Lead/{{ $('Webhook').item.json.body.leadName }}",
+        "options": {}
+      },
+      "name": "Update Lead3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -7200,
+        1408
+      ],
+      "id": "4882a311-a848-4050-a520-d3ea35a3dd37"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $('Webhook').item.json.body.chatId }},\n  \"text\": \"Lead updated! View: {{ $('Webhook').item.json.body.crmBaseUrl }}/app/lead/{{ $json.data.name }}\",\n  \"parse_mode\": \"Markdown\"\n}"
+      },
+      "name": "Send Update Link3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -6976,
+        1408
+      ],
+      "id": "375b79ba-fa67-4614-b4f2-80c17de90856"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const leadData = $input.item.json;\nconst chatId = $('Webhook').item.json.body.chatId;\n\nif (!leadData || !chatId) {\n  throw new Error('Missing leadData or chatId');\n}\n\n// MAP AI \"name\" → CRM \"first_name\"\nif (leadData.name) {\n  leadData.first_name = leadData.name;\n  delete leadData.name;\n}\n\nconst fieldsList = Object.entries(leadData)\n  .map(([key, value]) => `• *${key}:* ${value}`)\n  .join('\\n');\n\nfunction uuidv4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nconst draftId = uuidv4();\n\nconst telegramPayload = {\n  chat_id: chatId,\n  text: `*Draft Lead*\\n\\n${fieldsList || 'No data'}\\n\\nConfirm?`,\n  parse_mode: 'Markdown',\n  reply_markup: {\n    inline_keyboard: [\n      [{ text: 'Confirm', callback_data: `confirm_draft:${draftId}` }],\n      [{ text: 'Cancel', callback_data: 'cancel_draft' }]\n    ]\n  },\n  draftId: draftId,\n  leadData: leadData  // now has first_name\n};\n\nreturn { json: telegramPayload };"
+      },
+      "id": "75abbcbd-e69b-4706-be1b-fb51bb835354",
+      "name": "Format Telegram Message3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7200,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "let leadData = {};\nif ($json.leadData) {\n  leadData = typeof $json.leadData === 'string'\n    ? JSON.parse($json.leadData)\n    : $json.leadData;\n}\n\nconst draftId = $json.draftId;\nconst chatId = $json.chat_id;\nconst crmBaseUrl = $('Webhook').item.json.body.crmBaseUrl;\n\nconst pretty = Object.entries(leadData)\n  .map(([k, v]) => {\n    const label = k.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');\n    return `• *${label}:* ${v || '—'}`;\n  })\n  .join('\\n');\n\nreturn {\n  json: {\n    chat_id: chatId,\n    text: `*Draft Lead*\\n\\n${pretty}\\n\\nConfirm?\\n\\n(draftId: \\`${draftId}\\`)`,\n    parse_mode: \"Markdown\",\n    reply_markup: {\n      inline_keyboard: [\n        [\n          {\n            text: \"Confirm\",\n            callback_data: `confirm_draft:${draftId}`\n          },\n          {\n            text: \"Cancel\",\n            callback_data: \"cancel_draft\"\n          }\n        ]\n      ]\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6752,
+        1216
+      ],
+      "id": "e870efa4-c0f3-442e-9afe-bcc369354c9d",
+      "name": "Build Telegram Payload3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "=application/json",
+        "body": "={{\n{\n  chat_id: $json.chat_id,\n  text: $json.text,\n  parse_mode: \"Markdown\",\n  crmBaseUrl: $json.crmBaseUrl ,\n  reply_markup: $json.reply_markup\n\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -6528,
+        1216
+      ],
+      "id": "bf2241d1-31ff-465a-929e-aa5358ac4f77",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9961b5cb-a7d8-4c43-91ff-33d03caa2558",
+              "name": "draftId",
+              "value": "={{ $json.draftId }}",
+              "type": "string"
+            },
+            {
+              "id": "82d5bad4-fe54-485f-aa8c-b187e0776bea",
+              "name": "leadData",
+              "value": "={{ $json.leadData }}",
+              "type": "object"
+            },
+            {
+              "id": "fa0812b6-2433-4636-ab10-68c0885034c1",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "number"
+            },
+            {
+              "id": "caff8b8f-a8f3-4a58-beda-c28dac64c25a",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -6976,
+        1216
+      ],
+      "id": "7e45c535-e260-4f46-985b-4c00fb2c0cd8",
+      "name": "StoreDraft Data3"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "VOICE_LEAD_TRIGGER",
+        "options": {}
+      },
+      "name": "Webhook4",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -9344,
+        1312
+      ],
+      "id": "9a7aadba-5e9b-4e50-887a-1c14dd51dd74",
+      "webhookId": "e9b800f0-c8b5-49e3-a80f-84d603f52d4d"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.body.isUpdate }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Is Update?4",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -9120,
+        1312
+      ],
+      "id": "202c77d1-2ce3-4775-8723-35bb5db32109"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.fileUrl }}",
+        "responseFormat": "file",
+        "options": {}
+      },
+      "name": "Download Audio4",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -8896,
+        1312
+      ],
+      "id": "24301204-f2dc-46bf-8130-6220ea4e2e18"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "name": "Transcribe Audio4",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -8672,
+        1312
+      ],
+      "id": "e07c8db5-40bf-4436-9e61-c00238be2426",
+      "credentials": {
+        "openAiApi": {
+          "id": "07RiFjrpWpiDUJB6",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/method/frappe.client.get_list",
+        "options": {}
+      },
+      "name": "Get Lead Fields4",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -8448,
+        1312
+      ],
+      "id": "42c2192a-ca91-431a-a457-76fb75b528bf"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const docFields = $input.item.json.data;\n\nif (!docFields || docFields.length === 0) {\n  throw new Error('No DocFields data returned');\n}\n\nconst allowedFieldTypes = ['Data', 'Text', 'Small Text', 'Long Text', 'Int', 'Float', 'Currency', 'Check', 'Date', 'Datetime', 'Time', 'Select', 'Link', 'Email', 'Phone', 'URL'];\n\nconst fields = docFields\n  .filter(field => field.fieldname && field.label && !field.hidden && !field.read_only && allowedFieldTypes.includes(field.fieldtype))\n  .map(field => ({\n    name: field.fieldname,\n    label: field.label\n  }));\n\nreturn { json: { fields } };"
+      },
+      "name": "Parse Fields4",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -8224,
+        1312
+      ],
+      "id": "52344977-530e-4e85-be48-5e59388f5552"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a CRM data extractor. Extract ONLY mentioned fields from transcription.\n\nText: {{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}\n\nRULES:\n- Use ONLY field names above\n- DO NOT use \"name\" field\n- Split full name into first_name and last_name if mentioned\n- Output ONLY JSON\n\nExample: {\"first_name\": \"John\", \"last_name\": \"Doe\", \"email\": \"john@gmail.com\"}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "name": "Parse to JSON4",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -8000,
+        1312
+      ],
+      "id": "561b1bab-8809-4ffd-a362-1747d4d027e9",
+      "credentials": {
+        "openAiApi": {
+          "id": "07RiFjrpWpiDUJB6",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: $input.item.json.message.content };"
+      },
+      "name": "Extract Lead Data4",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7648,
+        1312
+      ],
+      "id": "0ed380d6-351e-4250-af71-80ba5080c154"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('Webhook').item.json.body.isUpdate }}",
+              "operation": "notEqual",
+              "value2": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "name": "Is Create?4",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -7424,
+        1312
+      ],
+      "id": "7a1a5fee-84d7-4be4-ae80-688e694b7df6"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/CRM%20Lead/{{ $('Webhook').item.json.body.leadName }}",
+        "options": {}
+      },
+      "name": "Update Lead4",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -7200,
+        1408
+      ],
+      "id": "4882a311-a848-4050-a520-d3ea35a3dd37"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $('Webhook').item.json.body.chatId }},\n  \"text\": \"Lead updated! View: {{ $('Webhook').item.json.body.crmBaseUrl }}/app/lead/{{ $json.data.name }}\",\n  \"parse_mode\": \"Markdown\"\n}"
+      },
+      "name": "Send Update Link4",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -6976,
+        1408
+      ],
+      "id": "375b79ba-fa67-4614-b4f2-80c17de90856"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const leadData = $input.item.json;\nconst chatId = $('Webhook').item.json.body.chatId;\n\nif (!leadData || !chatId) {\n  throw new Error('Missing leadData or chatId');\n}\n\n// MAP AI \"name\" → CRM \"first_name\"\nif (leadData.name) {\n  leadData.first_name = leadData.name;\n  delete leadData.name;\n}\n\nconst fieldsList = Object.entries(leadData)\n  .map(([key, value]) => `• *${key}:* ${value}`)\n  .join('\\n');\n\nfunction uuidv4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nconst draftId = uuidv4();\n\nconst telegramPayload = {\n  chat_id: chatId,\n  text: `*Draft Lead*\\n\\n${fieldsList || 'No data'}\\n\\nConfirm?`,\n  parse_mode: 'Markdown',\n  reply_markup: {\n    inline_keyboard: [\n      [{ text: 'Confirm', callback_data: `confirm_draft:${draftId}` }],\n      [{ text: 'Cancel', callback_data: 'cancel_draft' }]\n    ]\n  },\n  draftId: draftId,\n  leadData: leadData  // now has first_name\n};\n\nreturn { json: telegramPayload };"
+      },
+      "id": "75abbcbd-e69b-4706-be1b-fb51bb835354",
+      "name": "Format Telegram Message4",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7200,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "let leadData = {};\nif ($json.leadData) {\n  leadData = typeof $json.leadData === 'string'\n    ? JSON.parse($json.leadData)\n    : $json.leadData;\n}\n\nconst draftId = $json.draftId;\nconst chatId = $json.chat_id;\nconst crmBaseUrl = $('Webhook').item.json.body.crmBaseUrl;\n\nconst pretty = Object.entries(leadData)\n  .map(([k, v]) => {\n    const label = k.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');\n    return `• *${label}:* ${v || '—'}`;\n  })\n  .join('\\n');\n\nreturn {\n  json: {\n    chat_id: chatId,\n    text: `*Draft Lead*\\n\\n${pretty}\\n\\nConfirm?\\n\\n(draftId: \\`${draftId}\\`)`,\n    parse_mode: \"Markdown\",\n    reply_markup: {\n      inline_keyboard: [\n        [\n          {\n            text: \"Confirm\",\n            callback_data: `confirm_draft:${draftId}`\n          },\n          {\n            text: \"Cancel\",\n            callback_data: \"cancel_draft\"\n          }\n        ]\n      ]\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6752,
+        1216
+      ],
+      "id": "e870efa4-c0f3-442e-9afe-bcc369354c9d",
+      "name": "Build Telegram Payload4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "=application/json",
+        "body": "={{\n{\n  chat_id: $json.chat_id,\n  text: $json.text,\n  parse_mode: \"Markdown\",\n  crmBaseUrl: $json.crmBaseUrl ,\n  reply_markup: $json.reply_markup\n\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -6528,
+        1216
+      ],
+      "id": "bf2241d1-31ff-465a-929e-aa5358ac4f77",
+      "name": "HTTP Request4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9961b5cb-a7d8-4c43-91ff-33d03caa2558",
+              "name": "draftId",
+              "value": "={{ $json.draftId }}",
+              "type": "string"
+            },
+            {
+              "id": "82d5bad4-fe54-485f-aa8c-b187e0776bea",
+              "name": "leadData",
+              "value": "={{ $json.leadData }}",
+              "type": "object"
+            },
+            {
+              "id": "fa0812b6-2433-4636-ab10-68c0885034c1",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "number"
+            },
+            {
+              "id": "caff8b8f-a8f3-4a58-beda-c28dac64c25a",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -6976,
+        1216
+      ],
+      "id": "7e45c535-e260-4f46-985b-4c00fb2c0cd8",
+      "name": "StoreDraft Data4"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "VOICE_LEAD_TRIGGER",
+        "options": {}
+      },
+      "name": "Webhook5",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -9344,
+        1312
+      ],
+      "id": "9a7aadba-5e9b-4e50-887a-1c14dd51dd74",
+      "webhookId": "e9b800f0-c8b5-49e3-a80f-84d603f52d4d"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.body.isUpdate }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Is Update?5",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -9120,
+        1312
+      ],
+      "id": "202c77d1-2ce3-4775-8723-35bb5db32109"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.fileUrl }}",
+        "responseFormat": "file",
+        "options": {}
+      },
+      "name": "Download Audio5",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -8896,
+        1312
+      ],
+      "id": "24301204-f2dc-46bf-8130-6220ea4e2e18"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "name": "Transcribe Audio5",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -8672,
+        1312
+      ],
+      "id": "e07c8db5-40bf-4436-9e61-c00238be2426",
+      "credentials": {
+        "openAiApi": {
+          "id": "07RiFjrpWpiDUJB6",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/method/frappe.client.get_list?doctype=CRM%20Lead&fields=%5B%22*%22%5D",
+        "options": {}
+      },
+      "name": "Get Lead Fields5",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -8448,
+        1312
+      ],
+      "id": "42c2192a-ca91-431a-a457-76fb75b528bf"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const docFields = $input.item.json.data;\n\nif (!docFields || docFields.length === 0) {\n  throw new Error('No DocFields data returned');\n}\n\nconst allowedFieldTypes = ['Data', 'Text', 'Small Text', 'Long Text', 'Int', 'Float', 'Currency', 'Check', 'Date', 'Datetime', 'Time', 'Select', 'Link', 'Email', 'Phone', 'URL'];\n\nconst fields = docFields\n  .filter(field => field.fieldname && field.label && !field.hidden && !field.read_only && allowedFieldTypes.includes(field.fieldtype))\n  .map(field => ({\n    name: field.fieldname,\n    label: field.label\n  }));\n\nreturn { json: { fields } };"
+      },
+      "name": "Parse Fields5",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -8224,
+        1312
+      ],
+      "id": "52344977-530e-4e85-be48-5e59388f5552"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a CRM data extractor. Extract ONLY mentioned fields from transcription.\n\nText: {{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}\n\nRULES:\n- Use ONLY field names above\n- DO NOT use \"name\" field\n- Split full name into first_name and last_name if mentioned\n- Output ONLY JSON\n\nExample: {\"first_name\": \"John\", \"last_name\": \"Doe\", \"email\": \"john@gmail.com\"}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "name": "Parse to JSON5",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -8000,
+        1312
+      ],
+      "id": "561b1bab-8809-4ffd-a362-1747d4d027e9",
+      "credentials": {
+        "openAiApi": {
+          "id": "07RiFjrpWpiDUJB6",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: $input.item.json.message.content };"
+      },
+      "name": "Extract Lead Data5",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7648,
+        1312
+      ],
+      "id": "0ed380d6-351e-4250-af71-80ba5080c154"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('Webhook').item.json.body.isUpdate }}",
+              "operation": "notEqual",
+              "value2": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "name": "Is Create?5",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -7424,
+        1312
+      ],
+      "id": "7a1a5fee-84d7-4be4-ae80-688e694b7df6"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/CRM%20Lead/{{ $('Webhook').item.json.body.leadName }}",
+        "options": {}
+      },
+      "name": "Update Lead5",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -7200,
+        1408
+      ],
+      "id": "4882a311-a848-4050-a520-d3ea35a3dd37"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $('Webhook').item.json.body.chatId }},\n  \"text\": \"Lead updated! View: {{ $('Webhook').item.json.body.crmBaseUrl }}/app/lead/{{ $json.data.name }}\",\n  \"parse_mode\": \"Markdown\"\n}"
+      },
+      "name": "Send Update Link5",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -6976,
+        1408
+      ],
+      "id": "375b79ba-fa67-4614-b4f2-80c17de90856"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const leadData = $input.item.json;\nconst chatId = $('Webhook').item.json.body.chatId;\n\nif (!leadData || !chatId) {\n  throw new Error('Missing leadData or chatId');\n}\n\n// MAP AI \"name\" → CRM \"first_name\"\nif (leadData.name) {\n  leadData.first_name = leadData.name;\n  delete leadData.name;\n}\n\nconst fieldsList = Object.entries(leadData)\n  .map(([key, value]) => `• *${key}:* ${value}`)\n  .join('\\n');\n\nfunction uuidv4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nconst draftId = uuidv4();\n\nconst telegramPayload = {\n  chat_id: chatId,\n  text: `*Draft Lead*\\n\\n${fieldsList || 'No data'}\\n\\nConfirm?`,\n  parse_mode: 'Markdown',\n  reply_markup: {\n    inline_keyboard: [\n      [{ text: 'Confirm', callback_data: `confirm_draft:${draftId}` }],\n      [{ text: 'Cancel', callback_data: 'cancel_draft' }]\n    ]\n  },\n  draftId: draftId,\n  leadData: leadData  // now has first_name\n};\n\nreturn { json: telegramPayload };"
+      },
+      "id": "75abbcbd-e69b-4706-be1b-fb51bb835354",
+      "name": "Format Telegram Message5",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7200,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "let leadData = {};\nif ($json.leadData) {\n  leadData = typeof $json.leadData === 'string'\n    ? JSON.parse($json.leadData)\n    : $json.leadData;\n}\n\nconst draftId = $json.draftId;\nconst chatId = $json.chat_id;\nconst crmBaseUrl = $('Webhook').item.json.body.crmBaseUrl;\n\nconst pretty = Object.entries(leadData)\n  .map(([k, v]) => {\n    const label = k.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');\n    return `• *${label}:* ${v || '—'}`;\n  })\n  .join('\\n');\n\nreturn {\n  json: {\n    chat_id: chatId,\n    text: `*Draft Lead*\\n\\n${pretty}\\n\\nConfirm?\\n\\n(draftId: \\`${draftId}\\`)`,\n    parse_mode: \"Markdown\",\n    reply_markup: {\n      inline_keyboard: [\n        [\n          {\n            text: \"Confirm\",\n            callback_data: `confirm_draft:${draftId}`\n          },\n          {\n            text: \"Cancel\",\n            callback_data: \"cancel_draft\"\n          }\n        ]\n      ]\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6752,
+        1216
+      ],
+      "id": "e870efa4-c0f3-442e-9afe-bcc369354c9d",
+      "name": "Build Telegram Payload5"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "=application/json",
+        "body": "={{\n{\n  chat_id: $json.chat_id,\n  text: $json.text,\n  parse_mode: \"Markdown\",\n  crmBaseUrl: $json.crmBaseUrl ,\n  reply_markup: $json.reply_markup\n\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -6528,
+        1216
+      ],
+      "id": "bf2241d1-31ff-465a-929e-aa5358ac4f77",
+      "name": "HTTP Request5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9961b5cb-a7d8-4c43-91ff-33d03caa2558",
+              "name": "draftId",
+              "value": "={{ $json.draftId }}",
+              "type": "string"
+            },
+            {
+              "id": "82d5bad4-fe54-485f-aa8c-b187e0776bea",
+              "name": "leadData",
+              "value": "={{ $json.leadData }}",
+              "type": "object"
+            },
+            {
+              "id": "fa0812b6-2433-4636-ab10-68c0885034c1",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "number"
+            },
+            {
+              "id": "caff8b8f-a8f3-4a58-beda-c28dac64c25a",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -6976,
+        1216
+      ],
+      "id": "7e45c535-e260-4f46-985b-4c00fb2c0cd8",
+      "name": "StoreDraft Data5"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "VOICE_LEAD_TRIGGER",
+        "options": {}
+      },
+      "name": "Webhook6",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -9344,
+        1312
+      ],
+      "id": "9a7aadba-5e9b-4e50-887a-1c14dd51dd74",
+      "webhookId": "e9b800f0-c8b5-49e3-a80f-84d603f52d4d"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.body.isUpdate }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Is Update?6",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -9120,
+        1312
+      ],
+      "id": "202c77d1-2ce3-4775-8723-35bb5db32109"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.fileUrl }}",
+        "responseFormat": "file",
+        "options": {}
+      },
+      "name": "Download Audio6",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -8896,
+        1312
+      ],
+      "id": "24301204-f2dc-46bf-8130-6220ea4e2e18"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "name": "Transcribe Audio6",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -8672,
+        1312
+      ],
+      "id": "e07c8db5-40bf-4436-9e61-c00238be2426",
+      "credentials": {
+        "openAiApi": {
+          "id": "07RiFjrpWpiDUJB6",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/DocType/CRM Lead",
+        "options": {}
+      },
+      "name": "Get Lead Fields6",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -8448,
+        1312
+      ],
+      "id": "42c2192a-ca91-431a-a457-76fb75b528bf"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const docMeta = $input.item.json.data; if (!docMeta || !docMeta.fields) { throw new Error('No DocType metadata returned'); } const allowedFieldTypes = ['Data', 'Text', 'Small Text', 'Long Text', 'Int', 'Float', 'Currency', 'Check', 'Date', 'Datetime', 'Time', 'Select', 'Link', 'Email', 'Phone', 'URL']; const fields = docMeta.fields.filter(field => field.fieldname && field.label && !field.hidden && !field.read_only && allowedFieldTypes.includes(field.fieldtype)).map(field => ({ name: field.fieldname, label: field.label })); return { json: { fields } };"
+      },
+      "name": "Parse Fields6",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -8224,
+        1312
+      ],
+      "id": "52344977-530e-4e85-be48-5e59388f5552"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a CRM data extractor. Extract ONLY mentioned fields from transcription.\n\nText: {{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}\n\nRULES:\n- Use ONLY field names above\n- DO NOT use \"name\" field\n- Split full name into first_name and last_name if mentioned\n- Output ONLY JSON\n\nExample: {\"first_name\": \"John\", \"last_name\": \"Doe\", \"email\": \"john@gmail.com\"}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "name": "Parse to JSON6",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -8000,
+        1312
+      ],
+      "id": "561b1bab-8809-4ffd-a362-1747d4d027e9",
+      "credentials": {
+        "openAiApi": {
+          "id": "07RiFjrpWpiDUJB6",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: $input.item.json.message.content };"
+      },
+      "name": "Extract Lead Data6",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7648,
+        1312
+      ],
+      "id": "0ed380d6-351e-4250-af71-80ba5080c154"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('Webhook').item.json.body.isUpdate }}",
+              "operation": "notEqual",
+              "value2": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "name": "Is Create?6",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -7424,
+        1312
+      ],
+      "id": "7a1a5fee-84d7-4be4-ae80-688e694b7df6"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/resource/CRM%20Lead/{{ $('Webhook').item.json.body.leadName }}",
+        "options": {}
+      },
+      "name": "Update Lead6",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -7200,
+        1408
+      ],
+      "id": "4882a311-a848-4050-a520-d3ea35a3dd37"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $('Webhook').item.json.body.chatId }},\n  \"text\": \"Lead updated! View: {{ $('Webhook').item.json.body.crmBaseUrl }}/app/lead/{{ $json.data.name }}\",\n  \"parse_mode\": \"Markdown\"\n}"
+      },
+      "name": "Send Update Link6",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -6976,
+        1408
+      ],
+      "id": "375b79ba-fa67-4614-b4f2-80c17de90856"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const leadData = $input.item.json;\nconst chatId = $('Webhook').item.json.body.chatId;\n\nif (!leadData || !chatId) {\n  throw new Error('Missing leadData or chatId');\n}\n\n// MAP AI \"name\" → CRM \"first_name\"\nif (leadData.name) {\n  leadData.first_name = leadData.name;\n  delete leadData.name;\n}\n\nconst fieldsList = Object.entries(leadData)\n  .map(([key, value]) => `• *${key}:* ${value}`)\n  .join('\\n');\n\nfunction uuidv4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nconst draftId = uuidv4();\n\nconst telegramPayload = {\n  chat_id: chatId,\n  text: `*Draft Lead*\\n\\n${fieldsList || 'No data'}\\n\\nConfirm?`,\n  parse_mode: 'Markdown',\n  reply_markup: {\n    inline_keyboard: [\n      [{ text: 'Confirm', callback_data: `confirm_draft:${draftId}` }],\n      [{ text: 'Cancel', callback_data: 'cancel_draft' }]\n    ]\n  },\n  draftId: draftId,\n  leadData: leadData  // now has first_name\n};\n\nreturn { json: telegramPayload };"
+      },
+      "id": "75abbcbd-e69b-4706-be1b-fb51bb835354",
+      "name": "Format Telegram Message6",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7200,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "let leadData = {};\nif ($json.leadData) {\n  leadData = typeof $json.leadData === 'string'\n    ? JSON.parse($json.leadData)\n    : $json.leadData;\n}\n\nconst draftId = $json.draftId;\nconst chatId = $json.chat_id;\nconst crmBaseUrl = $('Webhook').item.json.body.crmBaseUrl;\n\nconst pretty = Object.entries(leadData)\n  .map(([k, v]) => {\n    const label = k.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');\n    return `• *${label}:* ${v || '—'}`;\n  })\n  .join('\\n');\n\nreturn {\n  json: {\n    chat_id: chatId,\n    text: `*Draft Lead*\\n\\n${pretty}\\n\\nConfirm?\\n\\n(draftId: \\`${draftId}\\`)`,\n    parse_mode: \"Markdown\",\n    reply_markup: {\n      inline_keyboard: [\n        [\n          {\n            text: \"Confirm\",\n            callback_data: `confirm_draft:${draftId}`\n          },\n          {\n            text: \"Cancel\",\n            callback_data: \"cancel_draft\"\n          }\n        ]\n      ]\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6752,
+        1216
+      ],
+      "id": "e870efa4-c0f3-442e-9afe-bcc369354c9d",
+      "name": "Build Telegram Payload6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "=application/json",
+        "body": "={{\n{\n  chat_id: $json.chat_id,\n  text: $json.text,\n  parse_mode: \"Markdown\",\n  crmBaseUrl: $json.crmBaseUrl ,\n  reply_markup: $json.reply_markup\n\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -6528,
+        1216
+      ],
+      "id": "bf2241d1-31ff-465a-929e-aa5358ac4f77",
+      "name": "HTTP Request6"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9961b5cb-a7d8-4c43-91ff-33d03caa2558",
+              "name": "draftId",
+              "value": "={{ $json.draftId }}",
+              "type": "string"
+            },
+            {
+              "id": "82d5bad4-fe54-485f-aa8c-b187e0776bea",
+              "name": "leadData",
+              "value": "={{ $json.leadData }}",
+              "type": "object"
+            },
+            {
+              "id": "fa0812b6-2433-4636-ab10-68c0885034c1",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "number"
+            },
+            {
+              "id": "caff8b8f-a8f3-4a58-beda-c28dac64c25a",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -6976,
+        1216
+      ],
+      "id": "7e45c535-e260-4f46-985b-4c00fb2c0cd8",
+      "name": "StoreDraft Data6"
     }
   ],
   "pinData": {},
@@ -478,11 +2227,6 @@
         ]
       ]
     },
-    "HTTP Request": {
-      "main": [
-        []
-      ]
-    },
     "StoreDraft Data": {
       "main": [
         [
@@ -495,15 +2239,15 @@
       ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "1c5334dd-7876-4839-ba0c-14b371a2e61c",
+  "versionId": "54c21d2a-3146-4e7b-ba9b-758d87c52475",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "ff704f4173ec39b158b66f039a9d69a1a97429263ff20f475877150f83b88720"
+    "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"
   },
-  "id": "oG5uPciHY2sexiVm",
+  "id": "PnMujQe8oGpP2UBU",
   "tags": []
 }

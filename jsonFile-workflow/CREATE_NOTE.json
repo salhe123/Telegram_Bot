@@ -10,8 +10,12 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [-2720, 912],
-      "webhookId": "a1b2c3d4-e5f6-7890-1234-abcdef123456"
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "a1b2c3d4-e5f6-7890-1234-abcdef123456",
+      "id": "313222f4-7f41-44d2-bf04-fa8f6fba4075"
     },
     {
       "parameters": {
@@ -20,23 +24,20 @@
         "url": "={{ $(\"Webhook\").item.json.body.crmBaseUrl }}/api/resource/Note",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "{\n  \"title\": \"{{ $(\"Webhook\").item.json.body.noteTitle }}\",\n  \"content\": \"{{ $(\"Webhook\").item.json.body.noteContent || '' }}\",\n  \"public\": true,\n  \"reference_doctype\": \"Lead\",\n  \"reference_name\": \"{{ $(\"Webhook\").item.json.body.docName }}\"\n}",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ \"token \" + $(\"Webhook\").item.json.body.frappeApiKey + \":\" + $(\"Webhook\").item.json.body.frappeApiSecret }}"
-            }
-          ]
-        }
+        "bodyParametersJson": "={\n  \"title\": \"{{ $json.body.noteTitle }}\",\n  \"content\": \"{{ $json.body.noteContent || '' }}\",\n  \"public\": true,\n  \"reference_doctype\": \"Lead\",\n  \"reference_name\": \"{{ $json.body.docName }}\"\n}\n",
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Webhook').item.json.body.frappeApiKey + ':' + $('Webhook').item.json.body.frappeApiSecret }}\"\n}"
       },
       "name": "Create Note",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
-      "position": [-2496, 912],
+      "position": [
+        224,
+        0
+      ],
+      "id": "8500c7f3-7683-4c5c-acea-65b65157fc30",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "QMLdwQmE0rzxBFFH",
+          "id": "usDoofPm00vuGNxF",
           "name": "Header Auth account"
         }
       }
@@ -44,17 +45,22 @@
     {
       "parameters": {
         "requestMethod": "POST",
-        "url": "https://api.telegram.org/bot{{ $(\"Webhook\").item.json.body.telegramBotToken }}/sendMessage",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "{\n  \"chat_id\": {{ $(\"Webhook\").item.json.body.chatId }},\n  \"text\": \"Note '{{ $(\"Webhook\").item.json.body.noteTitle }}' created for '{{ $(\"Webhook\").item.json.body.docName }}'!\",\n  \"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $(\"Webhook\").item.json.body.chatId }},\n  \"text\": \"Note '{{ $(\"Webhook\").item.json.body.noteTitle }}' created for '{{ $(\"Webhook\").item.json.body.docName }}'!\\nView all notes: [Note List](https://crm-demo.fr8labs.co/crm/notes/view)\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
       "name": "Send Confirmation",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
-      "position": [-2272, 912]
+      "position": [
+        448,
+        0
+      ],
+      "id": "5172f4fb-64c8-40aa-a424-4369dfc556e7"
     }
   ],
+  "pinData": {},
   "connections": {
     "Webhook": {
       "main": [
@@ -79,10 +85,15 @@
       ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "id": "oG5uPciHY2sexiVn",
+  "versionId": "ed19dcf7-c25e-490b-8224-fa77fea9f5bd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"
+  },
+  "id": "BksMq9TEGsl0KwwI",
   "tags": []
 }

@@ -213,7 +213,7 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": {{ $('Webhook').item.json.body.chatId }},\n  \"text\": \"Deal updated! View: {{ $('Webhook').item.json.body.crmBaseUrl }}/app/deal/{{ $json.data.name }}\",\n  \"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "={\n\"chat_id\": {{ $('Webhook').item.json.body.chatId }},\n\"text\": \"Deal updated! View: {{ $('Webhook').item.json.body.crmBaseUrl }}/crm/deals/{{ $json.data.name }}#activity\",\n\"parse_mode\": \"Markdown\"\n}"
       },
       "name": "Send Update Link",
       "type": "n8n-nodes-base.httpRequest",
@@ -486,7 +486,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "0d2ed1f0-d140-4b76-835a-fbf46c398e87",
+  "versionId": "27666679-298a-4a47-b6b4-acdb1bf4cb70",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"

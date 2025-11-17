@@ -10,10 +10,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -656,
-        272
+        -368,
+        208
       ],
-      "id": "4fd0a7ce-3194-4c7e-9016-c4109180b761",
+      "id": "22e60f80-bab3-4a1d-982a-3ce133579b4f",
       "name": "Wait for Confirmation1",
       "webhookId": "f69f5152-6e49-41f0-a5a2-9424e8e4310e"
     },
@@ -39,10 +39,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
       "position": [
-        -208,
-        240
+        80,
+        176
       ],
-      "id": "dc79b0d1-a97c-4b93-b8c1-c8a80997194a"
+      "id": "e59f1f35-21f1-4bba-a481-75062c6ef64b"
     },
     {
       "parameters": {
@@ -56,14 +56,13 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        16,
-        368
+        304,
+        304
       ],
-      "id": "a600b3fa-0ec0-4a4a-a968-174d63880998"
+      "id": "f06e711c-e704-4f56-a903-1df058fd0894"
     },
     {
       "parameters": {
-        "authentication": "headerAuth",
         "requestMethod": "POST",
         "url": "={{ $json.crmBaseUrl }}/api/resource/CRM%20Lead",
         "jsonParameters": true,
@@ -71,32 +70,19 @@
           "fullResponse": true
         },
         "bodyParametersJson": "={{ $json.leadData }}",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ \"token \" + $('Wait for Confirmation1').item.json.body.frappeApiKey + \":\" + $('Wait for Confirmation1').item.json.body.frappeApiSecret }}"
-            }
-          ]
-        }
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation1').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation1').item.json.body.frappeApiSecret }}\"\n}"
       },
       "name": "Create Lead1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        16,
-        176
+        304,
+        112
       ],
-      "id": "4af39f04-87f4-4735-ab7c-feb9c1c379d8",
+      "id": "7256d9b2-e6ef-4828-8b8b-5ae0a6132ba5",
       "alwaysOutputData": false,
       "executeOnce": false,
-      "retryOnFail": false,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "QMLdwQmE0rzxBFFH",
-          "name": "Header Auth account"
-        }
-      }
+      "retryOnFail": false
     },
     {
       "parameters": {
@@ -104,16 +90,16 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": \"{{ $('Wait for Confirmation1').item.json.body.chatId }}\",\n  \"text\": \"Lead created! View here: {{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}/app/crm-lead/view/list?name=%5B%22like%22%2C%22%25{{ $('Create Lead1').item.json.body.data.name || 'unknown' }}%25%22%5D\",\n  \"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $('Wait for Confirmation1').item.json.body.chatId }},\n  \"text\": \"Lead created! View here: {{ $('Wait for Confirmation1').item.json.body.crmBaseUrl + '/app/crm-lead/view/list?name=' + encodeURIComponent('[\\\"like\\\",\\\"%' + ($('Create Lead1').item.json.body.data.name || 'unknown') + '%\\\"]') }}\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
       "name": "Send CRM Link1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        240,
-        176
+        528,
+        112
       ],
-      "id": "e8ee4517-5368-4cbf-96cf-4861345dd99a"
+      "id": "d80998f6-d716-4ecd-9ea2-928e485c0686"
     },
     {
       "parameters": {
@@ -123,10 +109,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -432,
-        272
+        -144,
+        208
       ],
-      "id": "f2c00e56-f804-44c0-8f37-a9a0684b59e9",
+      "id": "84eed4d5-9778-418a-9794-b60b41f88ef3",
       "name": "leadData"
     }
   ],
@@ -184,15 +170,15 @@
       ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "c8277b1a-26ef-42cc-97c5-0281d0bf4c28",
+  "versionId": "9eb4c3ec-564d-4dba-96cd-7152dedfe2da",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "ff704f4173ec39b158b66f039a9d69a1a97429263ff20f475877150f83b88720"
+    "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"
   },
-  "id": "PFF9KcfBqLKR0WXW",
+  "id": "EkuXG53ornPSfxFJ",
   "tags": []
 }
