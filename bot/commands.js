@@ -2,7 +2,20 @@ const axios = require("axios");
 const bot = require("./telegram");
 const crmManager = require("./crm_manager");
 
+// Define states for the multi-step login process
+const LOGIN_STATE = {
+    NONE: 0,
+    WAITING_FOR_ALIAS: 1,
+    WAITING_FOR_USERNAME: 2,
+    WAITING_FOR_PASSWORD: 3,
+};
+
 function setupCommands() {
+    // Initialize user CRM sessions
+    bot.on("message", (msg) => {
+        crmManager.initializeUserCrmSession(msg.chat.id);
+    });
+
     // === /start ===
     bot.onText(/\/start/, (msg) => {
         const chatId = msg.chat.id;
@@ -27,11 +40,11 @@ function setupCommands() {
             `
 *Frappe CRM Bot – Quick Help*
 
-*1. Manage CRMs*
-  - \`/addcrm <alias> <url> <api_key> <api_secret>\`
-  - \`/listcrms\`
-  - \`/usecrm <alias>\`
-  - \`/delcrm <alias>\`
+*1. CRM Management*
+  - \`/login\`: Log in to your Frappe CRM instance.
+  - \`/listcrms\`: List your configured CRM instances.
+  - \`/usecrm <alias>\`: Set an active CRM instance.
+  - \`/delcrm <alias>\`: Delete a configured CRM instance.
 
 *2. Lead Management*
   - Create Lead: Send voice to Confirm draft
@@ -44,16 +57,13 @@ function setupCommands() {
 *4. Search Tips*  
 to Use org name, contact name, or ID
 
-*5. Health Check*  
-to \`/health\` or visit: \`${process.env.RENDER_EXTERNAL_URL || "https://your-bot.onrender.com"}/health\`
-
-*6. Create Task*
+*5. Create Task*
   - \`/createtask <lead_or_deal_name> <task_title> [task_description]\`
 
-*7. Create Note*
+*6. Create Note*
   - \`/createnote <lead_or_deal_name> <note_title> [note_content]\`
 
-*8. Convert Lead to Deal*
+*7. Convert Lead to Deal*
   - \`/convertlead <lead_name>\`
 
 Need help? Just type /help!
@@ -62,61 +72,120 @@ Need help? Just type /help!
         );
     });
 
-    // === CRM Management Commands ===
-    bot.onText(/\/addcrm (.+) (.+) (.+) (.+)/, async (msg, match) => {
+    // === /login command ===
+    bot.onText(/\/login/, async (msg) => {
         const chatId = msg.chat.id;
-        const [, alias, url, apiKey, apiSecret] = match;
-        try {
-            await crmManager.addCrm(chatId, alias.trim(), url.trim(), apiKey.trim(), apiSecret.trim());
-            await bot.sendMessage(chatId, `CRM '${alias}' added successfully!`);
-        } catch (error) {
-            await bot.sendMessage(chatId, `Error adding CRM: ${error.message}`);
-        }
+        bot.session[chatId] = bot.session[chatId] || {};
+        bot.session[chatId].loginState = LOGIN_STATE.WAITING_FOR_ALIAS;
+        await bot.sendMessage(chatId, "Please enter the alias for your CRM instance (e.g., 'mycompany', 'anothercrm'):");
     });
 
+    // === /listcrms command ===
     bot.onText(/\/listcrms/, async (msg) => {
         const chatId = msg.chat.id;
-        const crms = await crmManager.listCrms(chatId);
-        if (crms.length === 0) {
-            await bot.sendMessage(chatId, "No CRMs configured yet. Use `/addcrm` to add one.");
-            return;
+        const crmAliases = crmManager.listUserCrmAliases(chatId);
+        if (crmAliases.length === 0) {
+            return bot.sendMessage(chatId, "No CRMs configured yet. Use `/login` to add one.");
         }
-        const crmList = crms.map(crm => `- ${crm.alias} (${crm.url})`).join("\n");
+        const crmList = crmAliases.map(alias => {
+            const isActive = crmManager.getActiveCrmAlias(chatId) === alias;
+            return `- ${alias} ${isActive ? "(active)" : ""}`;
+        }).join("\n");
         await bot.sendMessage(chatId, `Your configured CRMs:\n${crmList}`);
     });
 
+    // === /usecrm command ===
     bot.onText(/\/usecrm (.+)/, async (msg, match) => {
         const chatId = msg.chat.id;
         const alias = match[1].trim();
-        const crm = await crmManager.getCrm(chatId, alias);
-        if (crm) {
-            crmManager.setActiveCrm(chatId, alias);
+        const crmConfig = await crmManager.getCrmConfig(chatId, alias);
+        if (crmConfig && crmManager.setActiveCrmAlias(chatId, alias)) {
             await bot.sendMessage(chatId, `CRM '${alias}' is now active.`);
+        } else {
+            await bot.sendMessage(chatId, `CRM with alias '${alias}' not found or not configured.`);
+        }
+    });
+
+    // === /delcrm command ===
+    bot.onText(/\/delcrm (.+)/, async (msg, match) => {
+        const chatId = msg.chat.id;
+        const alias = match[1].trim();
+        if (crmManager.deleteUserCrm(chatId, alias)) {
+            await bot.sendMessage(chatId, `CRM '${alias}' deleted successfully.`);
         } else {
             await bot.sendMessage(chatId, `CRM with alias '${alias}' not found.`);
         }
     });
 
-    bot.onText(/\/delcrm (.+)/, async (msg, match) => {
+    // === General message handler for login flow ===
+    bot.on("message", async (msg) => {
         const chatId = msg.chat.id;
-        const alias = match[1].trim();
-        try {
-            await crmManager.deleteCrm(chatId, alias);
-            // Also clear active CRM if it was the one deleted
-            if (crmManager.getActiveCrmAlias(chatId) === alias) {
-                crmManager.setActiveCrm(chatId, null);
-            }
-            await bot.sendMessage(chatId, `CRM '${alias}' deleted successfully.`);
-        } catch (error) {
-            await bot.sendMessage(chatId, `Error deleting CRM: ${error.message}`);
+        // Ignore commands and messages from the bot itself
+        if (msg.text && msg.text.startsWith("/") || msg.from.is_bot) {
+            return;
         }
-    });
 
-    // === /setcrm (deprecated, will be removed later) ===
-    bot.onText(/\/setcrm (.+)/, (msg, match) => {
-        const chatId = msg.chat.id;
-        const url = match[1].trim();
-        bot.sendMessage(chatId, `The /setcrm command is deprecated. Please use \`/addcrm\` and \`/usecrm\` instead.`);
+        bot.session[chatId] = bot.session[chatId] || {};
+        const loginState = bot.session[chatId].loginState || LOGIN_STATE.NONE;
+
+        switch (loginState) {
+            case LOGIN_STATE.WAITING_FOR_ALIAS:
+                const alias = msg.text.trim();
+                if (!crmManager.validateCrmAlias(alias)) {
+                    await bot.sendMessage(chatId, `Alias '${alias}' not recognized. Please contact your admin or try another alias.`);
+                    bot.session[chatId].loginState = LOGIN_STATE.NONE; // Reset state
+                    return;
+                }
+                bot.session[chatId].loginAlias = alias;
+                bot.session[chatId].loginState = LOGIN_STATE.WAITING_FOR_USERNAME;
+                await bot.sendMessage(chatId, `Alias '${alias}' found. Now, please enter your CRM username:`);
+                break;
+
+            case LOGIN_STATE.WAITING_FOR_USERNAME:
+                const username = msg.text.trim();
+                bot.session[chatId].loginUsername = username;
+                bot.session[chatId].loginState = LOGIN_STATE.WAITING_FOR_PASSWORD;
+                await bot.sendMessage(chatId, `Username '${username}' recorded. Please enter your CRM password:`);
+                break;
+
+            case LOGIN_STATE.WAITING_FOR_PASSWORD:
+                const password = msg.text.trim();
+                const loginAlias = bot.session[chatId].loginAlias;
+                const loginUsername = bot.session[chatId].loginUsername;
+
+                await bot.sendMessage(chatId, "Attempting to log in to CRM...");
+
+                try {
+                    const isAuthenticated = await crmManager.authenticateUser(loginAlias, loginUsername, password);
+                    if (isAuthenticated) {
+                        const crmDetails = crmManager.getFrappeApiKeys(loginAlias); // Get URL from secure config
+                        if (crmDetails) {
+                            await crmManager.addAuthenticatedCrm(chatId, loginAlias, crmDetails.url);
+                            crmManager.setActiveCrmAlias(chatId, loginAlias);
+                            await bot.sendMessage(chatId, `Successfully logged in to CRM '${loginAlias}'! It is now your active CRM.`);
+                        } else {
+                            await bot.sendMessage(chatId, `Login successful, but could not retrieve CRM details for '${loginAlias}'. Please contact admin.`);
+                        }
+                    } else {
+                        await bot.sendMessage(chatId, "Authentication failed. Please check your username and password.");
+                    }
+                } catch (error) {
+                    console.error("[LOGIN_FLOW] Authentication error:", error);
+                    await bot.sendMessage(chatId, "An error occurred during authentication. Please try again later.");
+                } finally {
+                    // Clear sensitive info and reset state
+                    delete bot.session[chatId].loginAlias;
+                    delete bot.session[chatId].loginUsername;
+                    // Password is not stored in session, so no need to delete
+                    bot.session[chatId].loginState = LOGIN_STATE.NONE;
+                }
+                break;
+
+            case LOGIN_STATE.NONE:
+            default:
+                // Do nothing, or handle other non-command messages if needed
+                break;
+        }
     });
 
     // === /createtask ===
@@ -124,14 +193,9 @@ Need help? Just type /help!
         const chatId = msg.chat.id;
         const [, docName, taskTitle, taskDescription] = match; // Renamed leadName to docName for generality
 
-        const activeCrmAlias = crmManager.getActiveCrmAlias(chatId);
-        if (!activeCrmAlias) {
-            return bot.sendMessage(chatId, "No active CRM selected. Use `/usecrm <alias>` to select one.");
-        }
-
-        const activeCrm = await crmManager.getCrm(chatId, activeCrmAlias);
+        const activeCrm = await crmManager.getActiveCrmDetails(chatId);
         if (!activeCrm) {
-            return bot.sendMessage(chatId, `Active CRM '${activeCrmAlias}' not found. Please use \`/usecrm <alias>\` to select a valid CRM.`);
+            return bot.sendMessage(chatId, "No active CRM selected or authenticated. Use `/login` to set up your CRM.");
         }
 
         try {
@@ -157,14 +221,9 @@ Need help? Just type /help!
         const chatId = msg.chat.id;
         const [, docName, noteTitle, noteContent] = match;
 
-        const activeCrmAlias = crmManager.getActiveCrmAlias(chatId);
-        if (!activeCrmAlias) {
-            return bot.sendMessage(chatId, "No active CRM selected. Use `/usecrm <alias>` to select one.");
-        }
-
-        const activeCrm = await crmManager.getCrm(chatId, activeCrmAlias);
+        const activeCrm = await crmManager.getActiveCrmDetails(chatId);
         if (!activeCrm) {
-            return bot.sendMessage(chatId, `Active CRM '${activeCrmAlias}' not found. Please use \`/usecrm <alias>\` to select a valid CRM.`);
+            return bot.sendMessage(chatId, "No active CRM selected or authenticated. Use `/login` to set up your CRM.");
         }
 
         try {
@@ -190,14 +249,9 @@ Need help? Just type /help!
         const chatId = msg.chat.id;
         const leadName = match[1].trim();
 
-        const activeCrmAlias = crmManager.getActiveCrmAlias(chatId);
-        if (!activeCrmAlias) {
-            return bot.sendMessage(chatId, "No active CRM selected. Use `/usecrm <alias>` to select one.");
-        }
-
-        const activeCrm = await crmManager.getCrm(chatId, activeCrmAlias);
+        const activeCrm = await crmManager.getActiveCrmDetails(chatId);
         if (!activeCrm) {
-            return bot.sendMessage(chatId, `Active CRM '${activeCrmAlias}' not found. Please use \`/usecrm <alias>\` to select a valid CRM.`);
+            return bot.sendMessage(chatId, "No active CRM selected or authenticated. Use `/login` to set up your CRM.");
         }
 
         try {
@@ -254,14 +308,9 @@ Need help? Just type /help!
 // === runSearch() FUNCTION ===
 // Modified to accept a doctype argument
 async function runSearch(chatId, input, doctype) {
-    const activeCrmAlias = crmManager.getActiveCrmAlias(chatId);
-    if (!activeCrmAlias) {
-        return bot.sendMessage(chatId, "No active CRM selected. Use `/usecrm <alias>` to select one.");
-    }
-
-    const activeCrm = await crmManager.getCrm(chatId, activeCrmAlias);
+    const activeCrm = await crmManager.getActiveCrmDetails(chatId);
     if (!activeCrm) {
-        return bot.sendMessage(chatId, `Active CRM '${activeCrmAlias}' not found. Please use \`/usecrm <alias>\` to select a valid CRM.`);
+        return bot.sendMessage(chatId, "No active CRM selected or authenticated. Use `/login` to set up your CRM.");
     }
 
     const crmBaseUrl = activeCrm.url;
@@ -330,7 +379,7 @@ async function runSearch(chatId, input, doctype) {
                 limit_start: start,
             },
             headers: {
-                Authorization: `token ${frappeApiKey}:${frappeApiSecret}`,
+                Authorization: `token ${frappeApiKey}:${fraappeApiSecret}`,
             },
         });
 

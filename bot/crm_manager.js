@@ -1,76 +1,149 @@
-const fs = require('fs').promises;
-const path = require('path');
 const bot = require("./telegram"); // Import bot to manage session
+const axios = require("axios"); // Import axios for API calls
+const { getFrappeApiKeys, listAvailableCrmAliases } = require("../config/crmApiKeys");
 
-const CRM_CONFIGS_FILE = path.join(__dirname, '..', 'crm_configs.json');
+// This object will store user-specific CRM configurations in memory for the current session.
+// In a production environment, this would be persisted in a database.
+const userCrmSessions = {}; // { chatId: { activeCrmAlias: 'alias', crms: { 'alias': { url: '...', isAuthenticated: true } } } }
 
-async function loadCrmConfigs() {
-  try {
-    const data = await fs.readFile(CRM_CONFIGS_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      // File does not exist, return empty object
-      return {};
+function initializeUserCrmSession(chatId) {
+    if (!userCrmSessions[chatId]) {
+        userCrmSessions[chatId] = {
+            activeCrmAlias: null,
+            crms: {}, // Stores authenticated CRM instances for the user
+        };
     }
-    console.error("[CRM_MANAGER] Error loading CRM configs:", error);
-    return {};
-  }
 }
 
-async function saveCrmConfigs(configs) {
-  try {
-    await fs.writeFile(CRM_CONFIGS_FILE, JSON.stringify(configs, null, 2), 'utf8');
-  } catch (error) {
-    console.error("[CRM_MANAGER] Error saving CRM configs:", error);
-  }
+async function getCrmConfig(chatId, alias) {
+    initializeUserCrmSession(chatId);
+    const userSession = userCrmSessions[chatId];
+    return userSession.crms[alias];
 }
 
-async function addCrm(chatId, alias, url, apiKey, apiSecret) {
-  const configs = await loadCrmConfigs();
-  configs[chatId] = configs[chatId] || [];
-
-  if (configs[chatId].some(crm => crm.alias === alias)) {
-    throw new Error(`CRM with alias '${alias}' already exists.`);
-  }
-
-  configs[chatId].push({ alias, url, apiKey, apiSecret });
-  await saveCrmConfigs(configs);
+async function addAuthenticatedCrm(chatId, alias, url) {
+    initializeUserCrmSession(chatId);
+    userCrmSessions[chatId].crms[alias] = { url, isAuthenticated: true };
+    // Automatically set as active if it's the first one or explicitly set
+    if (!userCrmSessions[chatId].activeCrmAlias) {
+        userCrmSessions[chatId].activeCrmAlias = alias;
+    }
 }
 
-async function listCrms(chatId) {
-  const configs = await loadCrmConfigs();
-  return configs[chatId] || [];
-}
-
-async function getCrm(chatId, alias) {
-  const configs = await loadCrmConfigs();
-  const userCrms = configs[chatId] || [];
-  return userCrms.find(crm => crm.alias === alias);
-}
-
-async function deleteCrm(chatId, alias) {
-  const configs = await loadCrmConfigs();
-  configs[chatId] = (configs[chatId] || []).filter(crm => crm.alias !== alias);
-  await saveCrmConfigs(configs);
-}
-
-function setActiveCrm(chatId, alias) {
-  bot.session[chatId] = bot.session[chatId] || {};
-  bot.session[chatId].activeCrmAlias = alias;
+function setActiveCrmAlias(chatId, alias) {
+    initializeUserCrmSession(chatId);
+    if (userCrmSessions[chatId].crms[alias]) {
+        userCrmSessions[chatId].activeCrmAlias = alias;
+        return true;
+    }
+    return false;
 }
 
 function getActiveCrmAlias(chatId) {
-  return bot.session[chatId]?.activeCrmAlias;
+    initializeUserCrmSession(chatId);
+    return userCrmSessions[chatId].activeCrmAlias;
+}
+
+async function getActiveCrmDetails(chatId) {
+    initializeUserCrmSession(chatId);
+    const activeAlias = userCrmSessions[chatId].activeCrmAlias;
+    if (!activeAlias) {
+        return null;
+    }
+    const crmConfig = userCrmSessions[chatId].crms[activeAlias];
+    if (!crmConfig || !crmConfig.isAuthenticated) {
+        return null;
+    }
+
+    // Retrieve API keys from the secure backend
+    const frappeApiKeys = getFrappeApiKeys(activeAlias);
+    if (!frappeApiKeys) {
+        console.error(`[CRM_MANAGER] API keys not found for active alias '${activeAlias}' in secure config.`);
+        return null;
+    }
+
+    return {
+        alias: activeAlias,
+        url: crmConfig.url,
+        apiKey: frappeApiKeys.apiKey,
+        apiSecret: frappeApiKeys.apiSecret,
+    };
+}
+
+function listUserCrmAliases(chatId) {
+    initializeUserCrmSession(chatId);
+    return Object.keys(userCrmSessions[chatId].crms);
+}
+
+function deleteUserCrm(chatId, alias) {
+    initializeUserCrmSession(chatId);
+    if (userCrmSessions[chatId].crms[alias]) {
+        delete userCrmSessions[chatId].crms[alias];
+        if (userCrmSessions[chatId].activeCrmAlias === alias) {
+            userCrmSessions[chatId].activeCrmAlias = null; // Clear active if deleted
+        }
+        return true;
+    }
+    return false;
+}
+
+// --- New Authentication-Related Functions ---
+
+/**
+ * Validates if a given alias exists in our pre-prepared API key store.
+ * @param {string} alias
+ * @returns {boolean}
+ */
+function validateCrmAlias(alias) {
+    const availableAliases = listAvailableCrmAliases();
+    return availableAliases.includes(alias);
+}
+
+/**
+ * Authenticates user credentials against the Frappe CRM instance.
+ * @param {string} alias - The alias of the CRM instance.
+ * @param {string} username - User's CRM username.
+ * @param {string} password - User's CRM password.
+ * @returns {Promise<boolean>} - True if authentication is successful, false otherwise.
+ */
+async function authenticateUser(alias, username, password) {
+    const crmDetails = getFrappeApiKeys(alias);
+    if (!crmDetails || !crmDetails.url) {
+        console.error(`[CRM_MANAGER] CRM URL not found for alias: ${alias}`);
+        return false;
+    }
+
+    try {
+        const response = await axios.post(`${crmDetails.url}/api/method/login`, {
+            usr: username,
+            pwd: password,
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        // Frappe CRM login endpoint typically returns 200 on success
+        if (response.status === 200) {
+            console.log(`[CRM_MANAGER] Authentication successful for alias: ${alias}, user: ${username}`);
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error(`[CRM_MANAGER] Authentication failed for alias: ${alias}, user: ${username}. Error:`, error.response?.data || error.message);
+        return false;
+    }
 }
 
 module.exports = {
-  loadCrmConfigs,
-  saveCrmConfigs,
-  addCrm,
-  listCrms,
-  getCrm,
-  deleteCrm,
-  setActiveCrm,
-  getActiveCrmAlias,
+    initializeUserCrmSession,
+    getCrmConfig,
+    addAuthenticatedCrm,
+    setActiveCrmAlias,
+    getActiveCrmAlias,
+    getActiveCrmDetails,
+    listUserCrmAliases,
+    deleteUserCrm,
+    validateCrmAlias,
+    authenticateUser,
 };
