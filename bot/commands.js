@@ -380,7 +380,7 @@ async function runSearch(chatId, input, doctype) {
                 limit_start: start,
             },
             headers: {
-                Authorization: `token ${frappeApiKey}:${fraappeApiSecret}`,
+                Authorization: `token ${frappeApiKey}:${frappeApiSecret}`,
             },
         });
 
