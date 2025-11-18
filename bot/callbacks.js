@@ -79,7 +79,7 @@ function setupCallbacks() {
                 return;
             }
 
-            const activeCrm = await crmManager.getCrm(chatId, activeCrmAlias);
+            const activeCrm = await crmManager.getActiveCrmDetails(chatId);
             if (!activeCrm) {
                 await bot.editMessageText(`Active CRM '${activeCrmAlias}' not found. Please use 
 /usecrm <alias>
@@ -147,7 +147,7 @@ function setupCallbacks() {
                 return;
             }
 
-            const activeCrm = await crmManager.getCrm(chatId, activeCrmAlias);
+            const activeCrm = await crmManager.getActiveCrmDetails(chatId);
             if (!activeCrm) {
                 await bot.editMessageText(`Active CRM '${activeCrmAlias}' not found. Please use 
 /usecrm <alias>
