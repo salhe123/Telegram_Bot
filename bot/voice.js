@@ -19,7 +19,7 @@ function setupVoiceHandler() {
             });
         }
 
-        const activeCrm = await crmManager.getCrm(chatId, activeCrmAlias);
+        const activeCrm = await crmManager.getActiveCrmDetails(chatId);
         if (!activeCrm) {
             console.log(`[VOICE] Active CRM '${activeCrmAlias}' not found`);
             return bot.sendMessage(chatId, `Active CRM '${activeCrmAlias}' not found. Please use \"/usecrm <alias>\` to select a valid CRM.`, {
