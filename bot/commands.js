@@ -48,24 +48,22 @@ function setupCommands() {
   - \`/delcrm <alias>\`: Delete a configured CRM instance.
 
 *2. Lead Management*
-  - Create Lead: Send voice to Confirm draft
-  - Update Lead: Type: \`/searchleads Acme\` to See top 5 results and select and update
+  - Create Lead: Send voice to Confirm draft (Tasks & Notes can be included in voice)
+  - Update Lead: Type: \`/searchleads Acme\` to See top 5 results and select and update (Tasks & Notes can be included in voice)
 
 *3. Deal Management*
-  - Create Deal: Send voice to Confirm draft
-  - Update Deal: Type: \`/searchdeals ProjectX\` to See top 5 results and select and update
+  - Create Deal: Send voice to Confirm draft (Tasks & Notes can be included in voice)
+  - Update Deal: Type: \`/searchdeals ProjectX\` to See top 5 results and select and update (Tasks & Notes can be included in voice)
 
 *4. Search Tips*  
 to Use org name, contact name, or ID
 
-*5. Create Task*
-  - \`/createtask <lead_or_deal_name> <task_title> [task_description]\`
+*5. Integrated Task & Note Creation*
+  - Tasks and Notes are now created via voice input when creating or updating Leads and Deals.
+  - Simply mention tasks (e.g., "create a task to call John tomorrow") or notes (e.g., "add a note: client was happy") in your voice message.
 
-*6. Create Note*
-  - \`/createnote <lead_or_deal_name> <note_title> [note_content]\`
-
-*7. Convert Lead to Deal*
-  - \`/convertlead <lead_name>\`
+*6. Convert Lead to Deal*
+  - \`/convertlead <lead_name>\` (Currently disabled as per your request)
 
 Need help? Just type /help!
   `,
