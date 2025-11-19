@@ -81,9 +81,7 @@ function setupCallbacks() {
 
             const activeCrm = await crmManager.getActiveCrmDetails(chatId);
             if (!activeCrm) {
-                await bot.editMessageText(`Active CRM '${activeCrmAlias}' not found. Please use 
-/usecrm <alias>
- to select a valid CRM.`, {
+                await bot.editMessageText(`Active CRM '${activeCrmAlias}' not found. Please use \n/usecrm <alias>\n to select a valid CRM.`, {
                     chat_id: chatId,
                     message_id: query.message.message_id,
                 });
@@ -93,21 +91,91 @@ function setupCallbacks() {
             const frappeApiKey = activeCrm.apiKey;
             const frappeApiSecret = activeCrm.apiSecret;
 
-            const leadData = {}; // This is still leadData, as this callback is for leads
-            const lines = query.message.text.split("\n").filter((l) => l.trim() !== "");
-            console.log(
-                "[CALLBACK] confirm_draft to parsing lead data from message",
-                lines
-            );
+            // Prefer original draft data stored in session if available and matches draftId
+            let leadDataObj = null;
+            if (bot.session[chatId] && bot.session[chatId].draft && bot.session[chatId].draft.draftId === draftId && bot.session[chatId].draft.leadData) {
+                leadDataObj = bot.session[chatId].draft.leadData;
+            } else {
+                // Fallback: parse displayed message including nested Tasks/Notes
+                leadDataObj = {};
+                leadDataObj.tasks = [];
+                leadDataObj.notes = [];
 
-            for (const line of lines) {
-                const clean = line.replace(/\*/g, "").trim();
-                const match = clean.match(/• (.+?): (.+)/);
-                if (match) {
-                    const key = match[1].trim().toLowerCase().replace(/ /g, "_");
-                    leadData[key] = match[2].trim();
+                const lines = query.message.text.split("\n");
+                let currentSection = null;
+
+                for (const rawLine of lines) {
+                    // remove formatting asterisks but preserve indentation for nested items
+                    const line = rawLine.replace(/\*/g, "").replace(/\r/g, "");
+                    if (!line.trim()) continue;
+
+                    // Top-level bullet like: • First Name: Alice
+                    const topMatch = line.trim().match(/^•\s*(.+?):\s*(.*)$/);
+                    if (topMatch) {
+                        const key = topMatch[1].trim().toLowerCase().replace(/ /g, '_');
+                        const value = topMatch[2].trim();
+
+                        if (key === 'tasks') {
+                            currentSection = 'tasks';
+                            continue;
+                        } else if (key === 'notes') {
+                            currentSection = 'notes';
+                            continue;
+                        } else {
+                            leadDataObj[key] = value;
+                            currentSection = null;
+                            continue;
+                        }
+                    }
+
+                    // Nested item lines under Tasks/Notes, e.g. "- title: Follow up..., description: ..., due_date: ..."
+                    const nestedMatch = line.match(/^\s*-\s*(.+)$/);
+                    if (nestedMatch && currentSection) {
+                        const payload = nestedMatch[1].trim();
+                        const obj = {};
+                        const parts = payload.split(",").map(p => p.trim()).filter(Boolean);
+                        for (const part of parts) {
+                            const kv = part.split(":");
+                            if (kv.length >= 2) {
+                                const k = kv[0].trim().toLowerCase().replace(/ /g, '_');
+                                const v = kv.slice(1).join(":").trim();
+                                obj[k] = v;
+                            } else {
+                                // fallback text
+                                obj.text = part;
+                            }
+                        }
+                        if (currentSection === 'tasks') leadDataObj.tasks.push(obj);
+                        if (currentSection === 'notes') leadDataObj.notes.push(obj);
+                        continue;
+                    }
+
+                    // Lines that look like indented nested properties (e.g. "    - title: ...")
+                    const indentedMatch = rawLine.match(/^\s+[-•]\s*(.+)$/);
+                    if (indentedMatch && currentSection) {
+                        const payload = indentedMatch[1].trim();
+                        const obj = {};
+                        const parts = payload.split(",").map(p => p.trim()).filter(Boolean);
+                        for (const part of parts) {
+                            const kv = part.split(":");
+                            if (kv.length >= 2) {
+                                const k = kv[0].trim().toLowerCase().replace(/ /g, '_');
+                                const v = kv.slice(1).join(":").trim();
+                                obj[k] = v;
+                            } else {
+                                obj.text = part;
+                            }
+                        }
+                        if (currentSection === 'tasks') leadDataObj.tasks.push(obj);
+                        if (currentSection === 'notes') leadDataObj.notes.push(obj);
+                        continue;
+                    }
                 }
             }
+
+            // Ensure arrays exist
+            leadDataObj.tasks = Array.isArray(leadDataObj.tasks) ? leadDataObj.tasks : (leadDataObj.tasks ? [leadDataObj.tasks] : []);
+            leadDataObj.notes = Array.isArray(leadDataObj.notes) ? leadDataObj.notes : (leadDataObj.notes ? [leadDataObj.notes] : []);
 
             try {
                 await bot.editMessageText("Creating lead...", {
@@ -115,13 +183,14 @@ function setupCallbacks() {
                     message_id: query.message.message_id,
                 });
 
+                // send leadData as an object (not string)
                 await axios.post(process.env.N8N_CONFIRM_WEBHOOK_URL, {
                     draftId,
                     chatId,
                     crmBaseUrl,
                     frappeApiKey,
                     frappeApiSecret,
-                    leadData: JSON.stringify(leadData),
+                    leadData: leadDataObj,
                 });
 
                 await bot.editMessageText("Waiting for CRM...", {
