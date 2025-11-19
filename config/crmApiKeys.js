@@ -4,7 +4,7 @@
 // environment variables, or a secrets management service.
 
 const crmApiKeys = {
-    "seya": {
+    "Glen": {
         url: "https://crm-demo.fr8labs.co/",
         apiKey: process.env.FRAPPE_API_KEY,
         apiSecret: process.env.FRAPPE_SECRET_KEY,

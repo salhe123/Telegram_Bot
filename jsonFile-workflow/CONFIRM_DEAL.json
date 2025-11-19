@@ -71,7 +71,7 @@
           "fullResponse": true
         },
         "bodyParametersJson": "={{ $json.dealData }}",
-        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation1').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation1').item.json.body.frappeApiSecret }}\"\n}"
+        "headerParametersJson": "={ \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation1').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation1').item.json.body.frappeApiSecret }}\" }"
       },
       "name": "Create Deal1",
       "type": "n8n-nodes-base.httpRequest",
@@ -97,7 +97,7 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": \"{{ $('Wait for Confirmation1').item.json.body.chatId }}\",\n  \"text\": \"Deal created! View here: {{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}/crm/deals/{{ $('Create Deal1').item.json.body.data.name || 'unknown' }}#activity\",\n  \"parse_mode\": \"Markdown\"\n}\n"
+        "bodyParametersJson": "={ \"chat_id\": \"{{ $('Wait for Confirmation1').item.json.body.chatId }}\", \"text\": \"Deal created! View here: {{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}/crm/deals/{{ $('Create Deal1').item.json.body.data.name || 'unknown' }}#activity\", \"parse_mode\": \"Markdown\" }"
       },
       "name": "Send CRM Link1",
       "type": "n8n-nodes-base.httpRequest",
@@ -121,6 +121,164 @@
       ],
       "id": "5dfb065f-1a24-4937-8ee6-d8bb0eefd8f0",
       "name": "dealData"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('Create Deal1').item.json.body.data.name }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "name": "Deal Created?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        224,
+        -128
+      ],
+      "id": "708e8f8f-d2b0-42b4-a1ea-3e32c6f5dafe-deal"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$('dealData').item.json.dealData.tasks}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "name": "Check for Tasks",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        448,
+        -128
+      ],
+      "id": "2b2b3524-7115-4d98-bf4c-f0b824f7e77b-deal"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  json: {\n    tasks: $('dealData').item.json.dealData.tasks || []\n  }\n};"
+      },
+      "name": "Iterate Tasks",
+      "type": "n8n-nodes-base.type",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -128
+      ],
+      "id": "5e4e0a38-169c-4613-82e1-d401be13ade8-deal"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "={{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}/api/resource/CRM%20Task",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={{ JSON.stringify({ title: $json.tasks[0].title, description: $json.tasks[0].description || '', due_date: '2025-11-28', reference_doctype: 'CRM Deal', reference_name: $('Create Deal1').item.json.body.data.name }) }}",
+        "headerParametersJson": "={ \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation1').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation1').item.json.body.frappeApiSecret }}\" }"
+      },
+      "name": "Create Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -128
+      ],
+      "id": "7bb2030e-78e5-4026-894f-f70e45b1ed01-deal"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={ \"chat_id\": {{ $(\"Wait for Confirmation1\").item.json.body.chatId }}, \"text\": \"Task '{{ $json.tasks[0].title }}' created for '{{ $('dealData').item.json.dealData.name }}'!\\nView all tasks: [Task List]({{ $(\"Wait for Confirmation1\").item.json.body.crmBaseUrl + 'crm/tasks/view' }})\", \"parse_mode\": \"Markdown\" }"
+      },
+      "name": "Send Task Confirmation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        -128
+      ],
+      "id": "6bef64a1-be22-4610-883e-e10389bf8512-deal"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$('dealData').item.json.dealData.notes}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "name": "Check for Notes",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        448,
+        64
+      ],
+      "id": "d8726b5e-12f8-4046-be53-68eefead4ced-deal"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  json: {\n    notes: $('dealData').item.json.dealData.notes || []\n  }\n};"
+      },
+      "name": "Iterate Notes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        64
+      ],
+      "id": "cc0ebf4a-b30d-461d-b367-7d01d00db2b0-deal"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "={{ $(' Wait for Confirmation1').item.json.body.crmBaseUrl }}/api/resource/Note",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={{ { title: $json.notes[0].title, content: $json.notes[0].content || '', reference_doctype: \"CRM Deal\", reference_name: $(\"Create Deal1\").item.json.body.data.name } }}",
+        "headerParametersJson": "={ \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation1').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation1').item.json.body.frappeApiSecret }}\" }"
+      },
+      "name": "Create Note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        896,
+        64
+      ],
+      "id": "141714f3-89c8-434b-a981-02a14ecf8000-deal"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={ \"chat_id\": {{ $(\"Wait for Confirmation1\").item.json.body.chatId }}, \"text\": \"Note '{{ $json.notes[0].title }}' created for '{{ $('dealData').item.json.dealData.name }}'!\\nView all notes: [note List]({{ $(\"Wait for Confirmation1\").item.json.body.crmBaseUrl + 'crm/notes/view' }})\", \"parse_mode\": \"Markdown\" }"
+      },
+      "name": "Send Note Confirmation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        64
+      ],
+      "id": "24e8e661-415c-4c65-b59f-8658c29f17df-deal"
     }
   ],
   "pinData": {},
@@ -162,6 +320,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Deal Created?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -170,6 +335,88 @@
         [
           {
             "node": "Check Mandatory Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deal Created?": {
+      "main": [
+        [
+          {
+            "node": "Check for Tasks",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check for Notes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Tasks": {
+      "main": [
+        [
+          {
+            "node": "Iterate Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Iterate Tasks": {
+      "main": [
+        [
+          {
+            "node": "Create Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Task": {
+      "main": [
+        [
+          {
+            "node": "Send Task Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Notes": {
+      "main": [
+        [
+          {
+            "node": "Iterate Notes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Iterate Notes": {
+      "main": [
+        [
+          {
+            "node": "Create Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Note": {
+      "main": [
+        [
+          {
+            "node": "Send Note Confirmation",
             "type": "main",
             "index": 0
           }

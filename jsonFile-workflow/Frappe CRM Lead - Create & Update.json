@@ -118,7 +118,7 @@
         "messages": {
           "values": [
             {
-              "content": "=You are a CRM data extractor. Extract ONLY mentioned fields from transcription.\n\nText: {{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}\n\nRULES:\n- Use ONLY field names above\n- DO NOT use \"name\" field\n- Split full name into first_name and last_name if mentioned\n- Output ONLY JSON\n\nExample: {\"first_name\": \"John\", \"last_name\": \"Doe\", \"email\": \"john@gmail.com\"}"
+              "content": "=\"=You are a CRM data extractor. Extract ONLY mentioned fields from transcription, and also identify any tasks or         \n  notes.\\n\\nText: {{ $('Transcribe Audio').item.json.text }}\\n\\nALLOWED LEAD FIELDS: {{ $('Parse Fields').item.json.fields.filter(f => f.name !== 'name').map(f => f.name + ' (' + f.label + ')').join(', ') }}\\n\\nRULES:\\n- Extract data for ALLOWED LEAD FIELDS.\\n- If a task is mentioned (e.g., \\\"create a task to call John      \n  tomorrow\\\", \\\"follow up with client by Friday\\\"), extract its 'title', 'description', and 'due_date' (if specified).\\n-  \n  If a note is mentioned (e.g., \\\"add a note: client was happy\\\", \\\"meeting summary: discussed pricing\\\"), extract its     \n  'title' and 'content'.\\n- Output a single JSON object. Lead fields should be top-level properties. Tasks and notes       \n  should be arrays of objects under 'tasks' and 'notes' keys, respectively.\\n- Example for Lead: {\\\"first_name\\\":          \n  \\\"John\\\", \\\"last_name\\\": \\\"Doe\\\", \\\"status\\\": \\\"New\\\", \\\"tasks\\\": [{\\\"title\\\": \\\"Call John\\\", \\\"description\\\": \\\"Discuss \n  new proposal\\\", \\\"due_date\\\": \\\"2025-11-20\\\"}], \\\"notes\\\": [{\\\"title\\\": \\\"Meeting notes\\\", \\\"content\\\": \\\"Client         \n  interested in product X.\\\"}]}\\n- Ensure 'name' field is NOT used for lead properties.\\n- Split full name into first_name \n  and last_name if mentioned.\\n- Output ONLY JSON.\""
             }
           ]
         },
@@ -206,7 +206,7 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": {{ $('Webhook').item.json.body.chatId }},\n  \"text\": \"Lead updated! View: {{ $('Webhook').item.json.body.crmBaseUrl + '/app/lead/' + ($json.data.name || 'unknown') }}\",\n  \"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $('Webhook').item.json.body.chatId }},\n  \"text\": \"Lead updated! View: {{ $('Webhook').item.json.body.crmBaseUrl + 'app/crm-lead/' + ($json.data.name || 'unknown') }}\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
       "name": "Send Update Link",
       "type": "n8n-nodes-base.httpRequest",
@@ -234,7 +234,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "let leadData = {};\nif ($json.leadData) {\n  leadData = typeof $json.leadData === 'string'\n    ? JSON.parse($json.leadData)\n    : $json.leadData;\n}\n\nconst draftId = $json.draftId;\nconst chatId = $json.chat_id;\nconst crmBaseUrl = $('Webhook').item.json.body.crmBaseUrl;\n\nconst pretty = Object.entries(leadData)\n  .map(([k, v]) => {\n    const label = k.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');\n    return `• *${label}:* ${v || '—'}`;\n  })\n  .join('\\n');\n\nreturn {\n  json: {\n    chat_id: chatId,\n    text: `*Draft Lead*\\n\\n${pretty}\\n\\nConfirm?\\n\\n(draftId: \\`${draftId}\\`)`,\n    parse_mode: \"Markdown\",\n    reply_markup: {\n      inline_keyboard: [\n        [\n          {\n            text: \"Confirm\",\n            callback_data: `confirm_draft:${draftId}`\n          },\n          {\n            text: \"Cancel\",\n            callback_data: \"cancel_draft\"\n          }\n        ]\n      ]\n    }\n  }\n};"
+        "jsCode": "let leadData = {};\nif ($json.leadData) {\n  leadData = typeof $json.leadData === 'string'\n    ? JSON.parse($json.leadData)\n    : $json.leadData;\n}\n\nconst draftId = $json.draftId;\nconst chatId = $json.chat_id;\nconst crmBaseUrl = $('Webhook').item.json.body.crmBaseUrl;\n\n// Helper function to format arrays/objects\nfunction formatValue(value) {\n  if (Array.isArray(value)) {\n    return value.map((item, idx) => {\n      if (typeof item === 'object' && item !== null) {\n        return '\\n    - ' + Object.entries(item)\n          .map(([k, v]) => `*${k}:* ${v || '—'}`)\n          .join(', ');\n      }\n      return `\\n    - ${item}`;\n    }).join('');\n  }\n  if (typeof value === 'object' && value !== null) {\n    return Object.entries(value)\n      .map(([k, v]) => `*${k}:* ${v || '—'}`)\n      .join(', ');\n  }\n  return value || '—';\n}\n\nconst pretty = Object.entries(leadData)\n  .map(([k, v]) => {\n    const label = k.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');\n    return `• *${label}:* ${formatValue(v)}`;\n  })\n  .join('\\n');\n\nreturn {\n  json: {\n    chat_id: chatId,\n    text: `*Draft Lead*\\n\\n${pretty}\\n\\nConfirm?\\n\\n(draftId: \\`${draftId}\\`)`,\n    parse_mode: \"Markdown\",\n    reply_markup: {\n      inline_keyboard: [\n        [\n          {\n            text: \"Confirm\",\n            callback_data: `confirm_draft:${draftId}`\n          },\n          {\n            text: \"Cancel\",\n            callback_data: \"cancel_draft\"\n          }\n        ]\n      ]\n    }\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2243,7 +2243,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "54c21d2a-3146-4e7b-ba9b-758d87c52475",
+  "versionId": "c5ac2c6f-3f52-4ce8-8267-460c998775c9",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"

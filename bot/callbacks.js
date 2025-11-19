@@ -141,7 +141,6 @@ function setupCallbacks() {
                                 const v = kv.slice(1).join(":").trim();
                                 obj[k] = v;
                             } else {
-                                // fallback text
                                 obj.text = part;
                             }
                         }

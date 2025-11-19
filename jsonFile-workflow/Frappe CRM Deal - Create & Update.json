@@ -125,7 +125,7 @@
         "messages": {
           "values": [
             {
-              "content": "={{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}"
+              "content": "You are a CRM data extractor. Extract ONLY mentioned fields from the transcription.\n\nText: {{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}\n\nRULES:\n- Use ONLY the field names provided in ALLOWED FIELDS.\n- If the user mentions tasks to be done, extract them into a `tasks` array. Each task should have a `title` and an optional `description`.\n- If the user mentions notes to be taken, extract them into a `notes` array. Each note should have a `title` and `content`.\n- Do NOT use the \"name\" field for the deal itself.\n- Output ONLY JSON.\n\nExample:\n{\n  \"title\": \"ACME Corp Deal\",\n  \"deal_value\": 10000,\n  \"tasks\": [\n    { \"title\": \"Send proposal\", \"description\": \"Draft and send the proposal by Friday\" },\n    { \"title\": \"Schedule follow-up call\" }\n  ],\n  \"notes\": [\n    { \"title\": \"Initial Meeting\", \"content\": \"Client is interested in product X and Y. They mentioned a budget around $10k.\" }\n  ]\n}"
             }
           ]
         },
@@ -190,7 +190,7 @@
         "jsonParameters": true,
         "options": {},
         "bodyParametersJson": "={{ $json }}",
-        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Webhook').item.json.body.frappeApiKey + ':' + $('Webhook').item.json.body.frappeApiSecret }}\"\n}"
+        "headerParametersJson": "={ \"Authorization\": \"token {{ $('Webhook').item.json.body.frappeApiKey }}:{{ $('Webhook').item.json.body.frappeApiSecret }}\" }"
       },
       "name": "Update Deal",
       "type": "n8n-nodes-base.httpRequest",
@@ -213,7 +213,7 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n\"chat_id\": {{ $('Webhook').item.json.body.chatId }},\n\"text\": \"Deal updated! View: {{ $('Webhook').item.json.body.crmBaseUrl }}/crm/deals/{{ $json.data.name }}#activity\",\n\"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "={ \"chat_id\": {{ $('Webhook').item.json.body.chatId }}, \"text\": \"Deal updated! View: {{ $('Webhook').item.json.body.crmBaseUrl }}/crm/deals/{{ $json.data.name }}#activity\", \"parse_mode\": \"Markdown\" }"
       },
       "name": "Send Update Link",
       "type": "n8n-nodes-base.httpRequest",
@@ -268,7 +268,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "=application/json",
-        "body": "={{\n{\n  \"chat_id\": $json.chat_id,\n  \"text\": $json.text,\n  \"parse_mode\": \"Markdown\",\n  \"crmBaseUrl\": $json.crmBaseUrl,\n  \"reply_markup\": $json.reply_markup\n\n}\n}}",
+        "body": "={{ $json }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",

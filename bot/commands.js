@@ -63,7 +63,7 @@ to Use org name, contact name, or ID
   - Simply mention tasks (e.g., "create a task to call John tomorrow") or notes (e.g., "add a note: client was happy") in your voice message.
 
 *6. Convert Lead to Deal*
-  - \`/convertlead <lead_name>\` (Currently disabled as per your request)
+  - \`/convertlead <lead_name>\` (coming soon)
 
 Need help? Just type /help!
   `,

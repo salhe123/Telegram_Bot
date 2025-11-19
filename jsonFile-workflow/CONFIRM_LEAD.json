@@ -2,6 +2,126 @@
   "name": "CONFIRM_LEAD",
   "nodes": [
     {
+      "parameters": {},
+      "name": "Check for Tasks",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        3248,
+        1968
+      ],
+      "id": "2b2b3524-7115-4d98-bf4c-f0b824f7e77b"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  json: {\n    tasks: $('leadData1').item.json.leadData.tasks || []\n  }\n};"
+      },
+      "name": "Iterate Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3472,
+        1968
+      ],
+      "id": "5e4e0a38-169c-4613-82e1-d401be13ade8"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "={{ $('Wait for Confirmation').item.json.body.crmBaseUrl }}/api/resource/CRM%20Task",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={{\nJSON.stringify({\ntitle: $json.tasks[0].title,\ndescription: $json.tasks[0].description || '',\ndue_date: '2025-11-28', // Replace with a valid date string\nreference_doctype: 'CRM Lead',\nreference_name: $('Create Lead').item.json.body.data.name\n})\n}}",
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation').item.json.body.frappeApiSecret }}\"\n}"
+      },
+      "name": "Create Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        3904,
+        1968
+      ],
+      "id": "7bb2030e-78e5-4026-894f-f70e45b1ed01"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $(\"Wait for Confirmation\").item.json.body.chatId }},\n  \"text\": \"Task '{{ $(\"Wait for Confirmation\").item.json.body.leadData.tasks[0].title }}' created for '{{ $(\"Wait for Confirmation\").item.json.body.leadData.first_name + ' ' + $(\"Wait for Confirmation\").item.json.body.leadData.last_name }}'!\\nView all tasks: [Task List]({{ $(\"Wait for Confirmation\").item.json.body.crmBaseUrl + 'crm/tasks/view' }})\",\n  \"parse_mode\": \"Markdown\"\n}\n"
+      },
+      "name": "Send Task Confirmation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        4128,
+        1968
+      ],
+      "id": "6bef64a1-be22-4610-883e-e10389bf8512"
+    },
+    {
+      "parameters": {},
+      "name": "Check for Notes",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        3248,
+        2160
+      ],
+      "id": "d8726b5e-12f8-4046-be53-68eefead4ced"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  json: {\n    tasks: $('leadData1').item.json.leadData.notes || []\n  }\n};"
+      },
+      "name": "Iterate Notes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3472,
+        2160
+      ],
+      "id": "cc0ebf4a-b30d-461d-b367-7d01d00db2b0"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "={{ $('Wait for Confirmation').item.json.body.crmBaseUrl }}/api/resource/FCRM%20Note",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={{ {\ntitle: $json.tasks[0].title,\ncontent: $json.tasks[0].content || '',\nreference_doctype: \"CRM Lead\",\nreference_name: $(\"Create Lead\").item.json.body.data.name\n} }}",
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation').item.json.body.frappeApiSecret }}\"\n}"
+      },
+      "name": "Create Note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        3696,
+        2160
+      ],
+      "id": "141714f3-89c8-434b-a981-02a14ecf8000"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n\"chat_id\": {{ $(\"Wait for Confirmation\").item.json.body.chatId }},\n\"text\": \"Note '{{ $(\"Wait for Confirmation\").item.json.body.leadData.notes[0].title }}' created for '{{ $(\"Wait for Confirmation\").item.json.body.leadData.first_name + ' ' + $(\"Wait for Confirmation\").item.json.body.leadData.last_name }}'!\\nView all notes: [note List]({{ $(\"Wait for Confirmation\").item.json.body.crmBaseUrl + 'crm/notes/view' }})\",\n\"parse_mode\": \"Markdown\"\n}"
+      },
+      "name": "Send Note Confirmation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        3920,
+        2160
+      ],
+      "id": "24e8e661-415c-4c65-b59f-8658c29f17df"
+    },
+    {
       "parameters": {
         "httpMethod": "POST",
         "path": "CONFIRM_LEAD",
@@ -10,11 +130,11 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -368,
-        208
+        2128,
+        2256
       ],
-      "id": "22e60f80-bab3-4a1d-982a-3ce133579b4f",
-      "name": "Wait for Confirmation1",
+      "id": "779b80da-0ca8-4265-a307-18a40cfaa3a1",
+      "name": "Wait for Confirmation",
       "webhookId": "f69f5152-6e49-41f0-a5a2-9424e8e4310e"
     },
     {
@@ -35,14 +155,14 @@
           ]
         }
       },
-      "name": "Check Mandatory Fields1",
+      "name": "Check Mandatory Fields",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
       "position": [
-        80,
-        176
+        2576,
+        2224
       ],
-      "id": "e59f1f35-21f1-4bba-a481-75062c6ef64b"
+      "id": "45f22abc-e1a3-4503-97db-9ac9ae4cb4b5"
     },
     {
       "parameters": {
@@ -52,14 +172,14 @@
         "options": {},
         "bodyParametersJson": "={{\n  \"chat_id\": $json.chatId,\n  \"text\": \"Please provide your *First Name* to create the lead it is mandatory so Record again please!\",\n  \"parse_mode\": \"Markdown\"\n}}"
       },
-      "name": "Prompt User1",
+      "name": "Prompt User",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        304,
-        304
+        2800,
+        2352
       ],
-      "id": "f06e711c-e704-4f56-a903-1df058fd0894"
+      "id": "ef1a62f0-4e5a-406f-9fd6-ad3b93f3954f"
     },
     {
       "parameters": {
@@ -70,16 +190,16 @@
           "fullResponse": true
         },
         "bodyParametersJson": "={{ $json.leadData }}",
-        "headerParametersJson": "={{\n  \"Authorization\": \"token \" + $('Wait for Confirmation1').item.json.body.frappeApiKey + \":\" + $('Wait for Confirmation1').item.json.body.frappeApiSecret\n}}"
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation').item.json.body.frappeApiSecret }}\"\n}"
       },
-      "name": "Create Lead1",
+      "name": "Create Lead",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        304,
-        112
+        2800,
+        2160
       ],
-      "id": "7256d9b2-e6ef-4828-8b8b-5ae0a6132ba5",
+      "id": "c4d3651b-db17-4ccf-b768-24de930d4eee",
       "alwaysOutputData": false,
       "executeOnce": false,
       "retryOnFail": false
@@ -90,241 +210,88 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={{\n  \"chat_id\": {{ $('Wait for Confirmation1').item.json.body.chatId }},\n  \"text\": \"Lead created! View here: {{ $('Wait for Confirmation1').item.json.body.crmBaseUrl + '/app/crm-lead/view/list?name=' + encodeURIComponent('[\\\"like\\\",\\\"%' + ($('Create Lead1').item.json.body.data.name || 'unknown') + '%\\\"]') }}\",\n  \"parse_mode\": \"Markdown\"\n}}"
+        "bodyParametersJson": "={{\nJSON.stringify({\nchat_id: $(\"Wait for Confirmation\").item.json.body.chatId,\ntext: \"Lead created! View here: \" + $(\"Wait for Confirmation\").item.json.body.crmBaseUrl + \"app/crm-lead/\" + ($(\"Create Lead\").item.json.body.data.name || 'unknown'),\nparse_mode: \"Markdown\"\n})\n}}"
       },
-      "name": "Send CRM Link1",
+      "name": "Send CRM Link",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        528,
-        112
+        3024,
+        2256
       ],
-      "id": "d80998f6-d716-4ecd-9ea2-928e485c0686"
+      "id": "fbf0630c-61bb-4008-8f85-74198206255b"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Code Node after Wait for Confirmation1\nconst text = $json.body.leadData;\nlet leadData = {};\n\nif (Array.isArray(text)) {\n  // Parse from message lines\n  text.forEach(line => {\n    const match = line.match(/• \\*(.+?):\\* (.+)/);\n    if (match) {\n      const key = match[1].trim().toLowerCase().replace(/ /g, '_');\n      leadData[key] = match[2].trim();\n    }\n  });\n} else if (typeof text === 'string') {\n  try {\n    leadData = JSON.parse(text);\n  } catch {}\n}\n\nreturn {\n  json: {\n    draftId: $json.body.draftId,\n    chatId: $json.body.chatId,\n    crmBaseUrl: $json.body.crmBaseUrl,   // Added\n    leadData\n  }\n};"
+        "jsCode": "const leadData = $json.body.leadData;\n\nreturn {\n  json: {\n    draftId: $json.body.draftId,\n    chatId: $json.body.chatId,\n    crmBaseUrl: $json.body.crmBaseUrl,\n    leadData\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -144,
-        208
+        2352,
+        2256
       ],
-      "id": "84eed4d5-9778-418a-9794-b60b41f88ef3",
-      "name": "leadData"
+      "id": "9edac965-adff-49fa-92db-648e823296c0",
+      "name": "leadData1"
     },
     {
       "parameters": {
-        "dataType": "string",
-        "value1": "={{ $json.leadData.tasks }}",
-        "rules": {
-          "rules": [
+        "conditions": {
+          "boolean": [
             {
-              "operation": "isNot",
-              "value2": "={{ [] }}"
+              "value1": "={{ $json.statusCode }}",
+              "value2": "={{ 200 }}"
             }
           ]
         }
       },
-      "name": "Check for Tasks",
+      "name": "Lead Created?1",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        528,
-        240
+        3024,
+        2064
       ],
-      "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+      "id": "708e8f8f-d2b0-42b4-a1ea-3e32c6f5dafe"
     },
     {
       "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "return $json.leadData.tasks;"
-      },
-      "name": "Iterate Tasks",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        752,
-        240
-      ],
-      "id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e"
-    },
-    {
-      "parameters": {
-        "requestMethod": "POST",
-        "url": "={{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}/api/resource/ToDo",
-        "jsonParameters": true,
-        "options": {},
-        "bodyParametersJson": "={{\n  \"subject\": \"{{ $json.title }}\",\n  \"description\": \"{{ $json.description || '' }}\",\n  \"due_date\": \"{{ $json.due_date || '' }}\",\n  \"reference_doctype\": \"CRM Lead\",\n  \"reference_name\": \"{{ $('Create Lead1').item.json.body.data.name }}\"\n}}",
-        "headerParametersJson": "={{\n  \"Authorization\": \"token \" + $('Wait for Confirmation1').item.json.body.frappeApiKey + \":\" + $('Wait for Confirmation1').item.json.body.frappeApiSecret\n}}"
-      },
-      "name": "Create Task",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [
-        976,
-        240
-      ],
-      "id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f"
-    },
-    {
-      "parameters": {
-        "requestMethod": "POST",
-        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
-        "jsonParameters": true,
-        "options": {},
-        "bodyParametersJson": "={{\n  \"chat_id\": {{ $('Wait for Confirmation1').item.json.body.chatId }},\n  \"text\": \"Task '{{ $json.title }}' created and linked to lead.\",\n  \"parse_mode\": \"Markdown\"\n}}"
-      },
-      "name": "Send Task Confirmation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [
-        1200,
-        240
-      ],
-      "id": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a"
-    },
-    {
-      "parameters": {
-        "dataType": "string",
-        "value1": "={{ $json.leadData.notes }}",
-        "rules": {
-          "rules": [
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
             {
-              "operation": "isNot",
-              "value2": "={{ [] }}"
+              "id": "507435a5-6431-47c1-a7dd-681a7eea4fe9",
+              "leftValue": "={{ $json.tasks.length }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
             }
-          ]
-        }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
       },
-      "name": "Check for Notes",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
+      "typeVersion": 2.2,
       "position": [
-        528,
-        360
+        3680,
+        1968
       ],
-      "id": "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b"
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "return $json.leadData.notes;"
-      },
-      "name": "Iterate Notes",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        752,
-        360
-      ],
-      "id": "f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c"
-    },
-    {
-      "parameters": {
-        "requestMethod": "POST",
-        "url": "={{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}/api/resource/Note",
-        "jsonParameters": true,
-        "options": {},
-        "bodyParametersJson": "={{\n  \"title\": \"{{ $json.title }}\",\n  \"content\": \"{{ $json.content || '' }}\",\n  \"reference_doctype\": \"CRM Lead\",\n  \"reference_name\": \"{{ $('Create Lead1').item.json.body.data.name }}\"\n}}",
-        "headerParametersJson": "={{\n  \"Authorization\": \"token \" + $('Wait for Confirmation1').item.json.body.frappeApiKey + \":\" + $('Wait for Confirmation1').item.json.body.frappeApiSecret\n}}"
-      },
-      "name": "Create Note",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [
-        976,
-        360
-      ],
-      "id": "a7b8c9d0-e1f2-4a3b-4c5d-6e7f8a9b0c1d"
-    },
-    {
-      "parameters": {
-        "requestMethod": "POST",
-        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
-        "jsonParameters": true,
-        "options": {},
-        "bodyParametersJson": "={{\n  \"chat_id\": {{ $('Wait for Confirmation1').item.json.body.chatId }},\n  \"text\": \"Note '{{ $json.title }}' created and linked to lead.\",\n  \"parse_mode\": \"Markdown\"\n}}"
-      },
-      "name": "Send Note Confirmation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [
-        1200,
-        360
-      ],
-      "id": "b8c9d0e1-f2a3-4b4c-5d6e-7f8a9b0c1d2e"
+      "id": "7a1d53db-8ca1-4a8e-8f8f-edbec34207de",
+      "name": "If"
     }
   ],
   "pinData": {},
   "connections": {
-    "Wait for Confirmation1": {
-      "main": [
-        [
-          {
-            "node": "leadData",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Check Mandatory Fields1": {
-      "main": [
-        [
-          {
-            "node": "Create Lead1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Prompt User1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Create Lead1": {
-      "main": [
-        [
-          {
-            "node": "Send CRM Link1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Check for Tasks",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Check for Notes",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "leadData": {
-      "main": [
-        [
-          {
-            "node": "Check Mandatory Fields1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Check for Tasks": {
       "main": [
         [
@@ -340,7 +307,7 @@
       "main": [
         [
           {
-            "node": "Create Task",
+            "node": "If",
             "type": "main",
             "index": 0
           }
@@ -390,13 +357,103 @@
           }
         ]
       ]
+    },
+    "Wait for Confirmation": {
+      "main": [
+        [
+          {
+            "node": "leadData1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Mandatory Fields": {
+      "main": [
+        [
+          {
+            "node": "Create Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prompt User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Lead": {
+      "main": [
+        [
+          {
+            "node": "Lead Created?1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send CRM Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "leadData1": {
+      "main": [
+        [
+          {
+            "node": "Check Mandatory Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Created?1": {
+      "main": [
+        [
+          {
+            "node": "Check for Tasks",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check for Notes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check for Notes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Create Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "9eb4c3ec-564d-4dba-96cd-7152dedfe2da",
+  "versionId": "8650aeaf-1e5b-426d-a502-7c7d8d9429c2",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"
