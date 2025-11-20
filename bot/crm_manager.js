@@ -36,7 +36,7 @@ async function addAuthenticatedCrm(chatId, alias, url) {
     userCrmSessions[chatId].crms[alias] = {
         url,
         isAuthenticated: true,
-        authTimestamp: Date.now(), // 👈 NEW: Store the login time
+        authTimestamp: Date.now(), // Store the login time
     };
     // Automatically set as active if it's the first one or explicitly set
     if (!userCrmSessions[chatId].activeCrmAlias) {
@@ -95,14 +95,13 @@ async function getActiveCrmDetails(chatId) {
         return null;
     }
 
-    // --- NEW: Check session expiration before retrieving API keys ---
+    // Check session expiration before retrieving API keys
     if (isSessionExpired(chatId, activeAlias)) {
         console.log(`[CRM_MANAGER] Session expired for chat: ${chatId}, alias: ${activeAlias}. User must re-authenticate.`);
         return null; // Session expired, block access
     }
 
     const crmConfig = userCrmSessions[chatId].crms[activeAlias];
-    // This check should technically be redundant if isSessionExpired is run, but kept for safety
     if (!crmConfig || !crmConfig.isAuthenticated) {
         return null;
     }
@@ -121,7 +120,6 @@ async function getActiveCrmDetails(chatId) {
         apiSecret: frappeApiKeys.apiSecret,
     };
 }
-// --- Rest of the existing functions (no changes needed) ---
 
 function listUserCrmAliases(chatId) {
     initializeUserCrmSession(chatId);
