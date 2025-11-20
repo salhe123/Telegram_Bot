@@ -3,28 +3,149 @@
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "CONFIRM_DEAL",
-        "options": {}
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('dealData1').item.json.dealData.tasks && $('dealData1').item.json.dealData.tasks.length > 0 }}",
+              "value2": "={{ true }}"
+            }
+          ]
+        }
       },
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
+      "name": "Check for Tasks",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
       "position": [
-        -672,
-        96
+        -416,
+        464
       ],
-      "id": "a785f8ea-a7c5-491d-9eb4-d43ef9b1106b",
-      "name": "Wait for Confirmation1",
-      "webhookId": "f69f5152-6e49-41f0-a5a2-9424e8e4310e"
+      "id": "67f4c693-8cd1-48bb-862b-df9a7d0b0e36"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const dealDataItem = $('dealData1').item.json;\nconst dealReferenceName = $('Create Deal').item.json.body.data.name || '';\n\nconst tasks = (dealDataItem.dealData && dealDataItem.dealData.tasks) || [];\n\nreturn tasks.map(task => ({\n  json: {\n    title: task.title || '',\n    description: task.description || '',\n    due_date: task.due_date || '{{ new Date().toISOString().split(\"T\")[0] }}',\n    dealReferenceName: dealReferenceName,\n    chatId: dealDataItem.chatId || '',\n    crmBaseUrl: dealDataItem.crmBaseUrl || '',\n    frappeApiKey: dealDataItem.frappeApiKey || '',\n    frappeApiSecret: dealDataItem.frappeApiSecret || '',\n    dealName: dealDataItem.dealData.deal_name || ''\n  }\n}));"
+      },
+      "name": "Iterate Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        464
+      ],
+      "id": "5014c382-2874-4e39-8308-d1600a3268b2"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "={{ $json.crmBaseUrl }}/api/resource/CRM%20Task",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={{\nJSON.stringify({\ntitle: $json.title,\ndescription: $json.description || '',\ndue_date: $json.due_date || '{{ new Date().toISOString().split(\"T\")[0] }}',\nreference_doctype: 'CRM Deal',\nreference_name: $('Create Deal').item.json.body.data.name\n})\n}}",
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $json.frappeApiKey + ':' + $json.frappeApiSecret }}\"\n}"
+      },
+      "name": "Create Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        32,
+        464
+      ],
+      "id": "79f343b5-957a-4f83-bf2d-cdfb001b3128"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $(\"Iterate Tasks\").item.json.chatId }},\n  \"text\": \"Task '{{ $(\"Iterate Tasks\").item.json.title }}' created for Deal '{{ $(\"Iterate Tasks\").item.json.dealName }}'!\\nView all tasks: [Task List]({{ $(\"Iterate Tasks\").item.json.crmBaseUrl + 'crm/tasks/view' }})\",\n  \"parse_mode\": \"Markdown\"\n}\n"
+      },
+      "name": "Send Task Confirmation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        256,
+        464
+      ],
+      "id": "5a6767a5-6f21-4b55-9d06-39ecdf1b24d7"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('dealData1').item.json.dealData.notes && $('dealData1').item.json.dealData.notes.length > 0 }}",
+              "value2": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "name": "Check for Notes",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        656
+      ],
+      "id": "dbb1627f-130b-494b-a94e-3b34607d498b"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const dealDataItem = $('dealData1').item.json;\nconst dealReferenceName = $('Create Deal').item.json.body.data.name || '';\n\nconst notes = (dealDataItem.dealData && dealDataItem.dealData.notes) || [];\n\nreturn notes.map(note => ({\n  json: {\n    title: note.title || '',\n    content: note.content || '',\n    dealReferenceName: dealReferenceName,\n    chatId: dealDataItem.chatId || '',\n    crmBaseUrl: dealDataItem.crmBaseUrl || '',\n    frappeApiKey: dealDataItem.frappeApiKey || '',\n    frappeApiSecret: dealDataItem.frappeApiSecret || '',\n    dealName: dealDataItem.dealData.deal_name || ''\n  }\n}));"
+      },
+      "name": "Iterate Notes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        656
+      ],
+      "id": "1190e1a6-991f-4787-957e-2b454cc8b4ad"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "={{ $json.crmBaseUrl }}/api/resource/FCRM%20Note",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={{ {\ntitle: $json.title,\ncontent: $json.content || '',\nreference_doctype: \"CRM Deal\",\nreference_name: $('Create Deal').item.json.body.data.name\n} }}",
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $json.frappeApiKey + ':' + $json.frappeApiSecret }}\"\n}"
+      },
+      "name": "Create Note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        32,
+        656
+      ],
+      "id": "22a9d2b5-34c7-42da-83b1-a17361cb5028"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n\"chat_id\": {{ $(\"Iterate Notes\").item.json.chatId }},\n\"text\": \"Note '{{ $(\"Iterate Notes\").item.json.title }}' created for Deal '{{ $(\"Iterate Notes\").item.json.dealName }}'!\\nView all notes: [note List]({{ $(\"Iterate Notes\").item.json.crmBaseUrl + 'crm/notes/view' }})\",\n\"parse_mode\": \"Markdown\"\n}"
+      },
+      "name": "Send Note Confirmation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        256,
+        656
+      ],
+      "id": "b3182a59-4421-407a-bfe3-a7b6a5c3269d"
     },
     {
       "parameters": {
         "dataType": "string",
-        "value1": "={{ ($json.dealData.name || '').trim() }}",
+        "value1": "={{ ($('dealData1').item.json.dealData.deal_name || '').trim() }}",
         "rules": {
           "rules": [
             {
-              "operation": "=equal",
               "value2": "={{ '' }}",
               "output": 1
             },
@@ -35,14 +156,14 @@
           ]
         }
       },
-      "name": "Check Mandatory Fields1",
+      "name": "Check Mandatory Fields",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
       "position": [
-        -224,
-        64
+        -1088,
+        720
       ],
-      "id": "e91fc7c7-ff9f-45d4-a695-57a25b341396"
+      "id": "ffa9f6a8-c77e-4406-8df1-a705d09096a1"
     },
     {
       "parameters": {
@@ -50,20 +171,19 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={{ { \"chat_id\": $json.chatId, \"text\": \"Please provide a *Deal Name* to create the deal it is mandatory so Record again please!\" } }}"
+        "bodyParametersJson": "={\n  \"chat_id\": $json.chatId,\n  \"text\": \"Please provide the *Deal Name* to create the deal. It is mandatory, so record again please!\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
-      "name": "Prompt User1",
+      "name": "Prompt User",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        0,
-        192
+        -864,
+        848
       ],
-      "id": "41dd8962-1540-46c9-a7ec-cbc5e4ffd478"
+      "id": "e6849c80-7f07-4692-b382-b825272ab5e9"
     },
     {
       "parameters": {
-        "authentication": "headerAuth",
         "requestMethod": "POST",
         "url": "={{ $json.crmBaseUrl }}/api/resource/CRM%20Deal",
         "jsonParameters": true,
@@ -71,25 +191,19 @@
           "fullResponse": true
         },
         "bodyParametersJson": "={{ $json.dealData }}",
-        "headerParametersJson": "={ \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation1').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation1').item.json.body.frappeApiSecret }}\" }"
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation').item.json.body.frappeApiSecret }}\"\n}"
       },
-      "name": "Create Deal1",
+      "name": "Create Deal",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        0,
-        0
+        -864,
+        656
       ],
-      "id": "e8da5385-0f33-42a2-8e5f-01989cb7d407",
+      "id": "b8f06c37-677d-441e-91d3-aee96b4d137c",
       "alwaysOutputData": false,
       "executeOnce": false,
-      "retryOnFail": false,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "usDoofPm00vuGNxF",
-          "name": "Header Auth account"
-        }
-      }
+      "retryOnFail": false
     },
     {
       "parameters": {
@@ -97,38 +211,24 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={ \"chat_id\": \"{{ $('Wait for Confirmation1').item.json.body.chatId }}\", \"text\": \"Deal created! View here: {{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}/crm/deals/{{ $('Create Deal1').item.json.body.data.name || 'unknown' }}#activity\", \"parse_mode\": \"Markdown\" }"
+        "bodyParametersJson": "={{\nJSON.stringify({\nchat_id: $(\"Wait for Confirmation\").item.json.body.chatId,\ntext: \"Deal created! View here: \" + $(\"Wait for Confirmation\").item.json.body.crmBaseUrl + \"app/crm-deal/\" + ($(\"Create Deal\").item.json.body.data.name || 'unknown'),\nparse_mode: \"Markdown\"\n})\n}}"
       },
-      "name": "Send CRM Link1",
+      "name": "Send CRM Link",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        224,
-        0
+        -640,
+        752
       ],
-      "id": "55d6d9c7-9a8d-4413-99e7-a3c8c32d5081"
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "// Code Node after Wait for Confirmation1\nconst text = $json.body.dealData;\nlet dealData = {};\n\nif (Array.isArray(text)) {\n  // Parse from message lines\n  text.forEach(line => {\n    const match = line.match(/• \\*(.+?):\\* (.+)/);\n    if (match) {\n      const key = match[1].trim().toLowerCase().replace(/ /g, '_');\n      dealData[key] = match[2].trim();\n    }\n  });\n} else if (typeof text === 'string') {\n  try {\n    dealData = JSON.parse(text);\n  } catch (e) {\n    // Ignore parsing errors\n  }\n}\n\nreturn {\n  json: {\n    draftId: $json.body.draftId,\n    chatId: $json.body.chatId,\n    crmBaseUrl: $json.body.crmBaseUrl,   // Added\n    dealData\n  }\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -448,
-        96
-      ],
-      "id": "5dfb065f-1a24-4937-8ee6-d8bb0eefd8f0",
-      "name": "dealData"
+      "id": "38808167-0eee-46d6-967b-48193f8b822e"
     },
     {
       "parameters": {
         "conditions": {
           "boolean": [
             {
-              "value1": "={{ $('Create Deal1').item.json.body.data.name }}",
-              "operation": "isNotEmpty"
+              "value1": "={{ $json.statusCode }}",
+              "value2": "={{ 200 }}"
             }
           ]
         }
@@ -137,226 +237,44 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        224,
-        -128
+        -640,
+        560
       ],
-      "id": "708e8f8f-d2b0-42b4-a1ea-3e32c6f5dafe-deal"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "boolean": [
-            {
-              "value1": "={{$('dealData').item.json.dealData.tasks}}",
-              "operation": "isNotEmpty"
-            }
-          ]
-        }
-      },
-      "name": "Check for Tasks",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [
-        448,
-        -128
-      ],
-      "id": "2b2b3524-7115-4d98-bf4c-f0b824f7e77b-deal"
+      "id": "7c1ce09a-ac47-4438-8aeb-2b2acfe59540"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "return {\n  json: {\n    tasks: $('dealData').item.json.dealData.tasks || []\n  }\n};"
+        "jsCode": "const dealData = { ...$json.body.dealData };\n\nif (Array.isArray(dealData.tasks) && dealData.tasks.length === 0) {\n  delete dealData.tasks;\n}\n\nif (Array.isArray(dealData.notes) && dealData.notes.length === 0) {\n  delete dealData.notes;\n}\n\nreturn {\n  json: {\n    draftId: $json.body.draftId,\n    chatId: $json.body.chatId,\n    crmBaseUrl: $json.body.crmBaseUrl,\n    frappeApiKey: $json.body.frappeApiKey,\n    frappeApiSecret: $json.body.frappeApiSecret,\n    dealData\n  }\n};\n"
       },
-      "name": "Iterate Tasks",
-      "type": "n8n-nodes-base.type",
-      "typeVersion": 2,
-      "position": [
-        672,
-        -128
-      ],
-      "id": "5e4e0a38-169c-4613-82e1-d401be13ade8-deal"
-    },
-    {
-      "parameters": {
-        "requestMethod": "POST",
-        "url": "={{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}/api/resource/CRM%20Task",
-        "jsonParameters": true,
-        "options": {},
-        "bodyParametersJson": "={{ JSON.stringify({ title: $json.tasks[0].title, description: $json.tasks[0].description || '', due_date: '2025-11-28', reference_doctype: 'CRM Deal', reference_name: $('Create Deal1').item.json.body.data.name }) }}",
-        "headerParametersJson": "={ \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation1').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation1').item.json.body.frappeApiSecret }}\" }"
-      },
-      "name": "Create Task",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [
-        896,
-        -128
-      ],
-      "id": "7bb2030e-78e5-4026-894f-f70e45b1ed01-deal"
-    },
-    {
-      "parameters": {
-        "requestMethod": "POST",
-        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
-        "jsonParameters": true,
-        "options": {},
-        "bodyParametersJson": "={ \"chat_id\": {{ $(\"Wait for Confirmation1\").item.json.body.chatId }}, \"text\": \"Task '{{ $json.tasks[0].title }}' created for '{{ $('dealData').item.json.dealData.name }}'!\\nView all tasks: [Task List]({{ $(\"Wait for Confirmation1\").item.json.body.crmBaseUrl + 'crm/tasks/view' }})\", \"parse_mode\": \"Markdown\" }"
-      },
-      "name": "Send Task Confirmation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [
-        1120,
-        -128
-      ],
-      "id": "6bef64a1-be22-4610-883e-e10389bf8512-deal"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "boolean": [
-            {
-              "value1": "={{$('dealData').item.json.dealData.notes}}",
-              "operation": "isNotEmpty"
-            }
-          ]
-        }
-      },
-      "name": "Check for Notes",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [
-        448,
-        64
-      ],
-      "id": "d8726b5e-12f8-4046-be53-68eefead4ced-deal"
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "return {\n  json: {\n    notes: $('dealData').item.json.dealData.notes || []\n  }\n};"
-      },
-      "name": "Iterate Notes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        672,
-        64
+        -1312,
+        752
       ],
-      "id": "cc0ebf4a-b30d-461d-b367-7d01d00db2b0-deal"
+      "id": "df206be9-a147-4e9f-9433-1405d46299e7",
+      "name": "dealData1"
     },
     {
       "parameters": {
-        "requestMethod": "POST",
-        "url": "={{ $(' Wait for Confirmation1').item.json.body.crmBaseUrl }}/api/resource/Note",
-        "jsonParameters": true,
-        "options": {},
-        "bodyParametersJson": "={{ { title: $json.notes[0].title, content: $json.notes[0].content || '', reference_doctype: \"CRM Deal\", reference_name: $(\"Create Deal1\").item.json.body.data.name } }}",
-        "headerParametersJson": "={ \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation1').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation1').item.json.body.frappeApiSecret }}\" }"
+        "httpMethod": "POST",
+        "path": "CONFIRM_DEAL",
+        "options": {}
       },
-      "name": "Create Note",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
       "position": [
-        896,
-        64
+        -1536,
+        752
       ],
-      "id": "141714f3-89c8-434b-a981-02a14ecf8000-deal"
-    },
-    {
-      "parameters": {
-        "requestMethod": "POST",
-        "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
-        "jsonParameters": true,
-        "options": {},
-        "bodyParametersJson": "={ \"chat_id\": {{ $(\"Wait for Confirmation1\").item.json.body.chatId }}, \"text\": \"Note '{{ $json.notes[0].title }}' created for '{{ $('dealData').item.json.dealData.name }}'!\\nView all notes: [note List]({{ $(\"Wait for Confirmation1\").item.json.body.crmBaseUrl + 'crm/notes/view' }})\", \"parse_mode\": \"Markdown\" }"
-      },
-      "name": "Send Note Confirmation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [
-        1120,
-        64
-      ],
-      "id": "24e8e661-415c-4c65-b59f-8658c29f17df-deal"
+      "id": "dc322c8d-eda3-4f13-b6d6-d8d780759790",
+      "name": "Wait for Confirmation",
+      "webhookId": "f69f5152-6e49-41f0-a5a2-9424e8e4310e"
     }
   ],
   "pinData": {},
   "connections": {
-    "Wait for Confirmation1": {
-      "main": [
-        [
-          {
-            "node": "dealData",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Check Mandatory Fields1": {
-      "main": [
-        [
-          {
-            "node": "Create Deal1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Prompt User1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Create Deal1": {
-      "main": [
-        [
-          {
-            "node": "Send CRM Link1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Deal Created?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "dealData": {
-      "main": [
-        [
-          {
-            "node": "Check Mandatory Fields1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Deal Created?": {
-      "main": [
-        [
-          {
-            "node": "Check for Tasks",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Check for Notes",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Check for Tasks": {
       "main": [
         [
@@ -422,13 +340,85 @@
           }
         ]
       ]
+    },
+    "Check Mandatory Fields": {
+      "main": [
+        [
+          {
+            "node": "Create Deal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prompt User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Deal": {
+      "main": [
+        [
+          {
+            "node": "Deal Created?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deal Created?": {
+      "main": [
+        [
+          {
+            "node": "Send CRM Link",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check for Tasks",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check for Notes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "dealData1": {
+      "main": [
+        [
+          {
+            "node": "Check Mandatory Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Confirmation": {
+      "main": [
+        [
+          {
+            "node": "dealData1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "809425c1-10be-4b67-9abd-2b23797b20e7",
+  "versionId": "406184af-ba60-4e97-b706-e9c0c2ea8e37",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"

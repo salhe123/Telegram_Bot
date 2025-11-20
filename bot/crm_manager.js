@@ -2,9 +2,13 @@ const bot = require("./telegram"); // Import bot to manage session
 const axios = require("axios"); // Import axios for API calls
 const { getFrappeApiKeys, listAvailableCrmAliases } = require("../config/crmApiKeys");
 
+// --- Configuration ---
+// Set the desired session duration (4 hours)
+const SESSION_DURATION_MS = 4 * 60 * 60 * 1000; // 14,400,000 milliseconds
+
 // This object will store user-specific CRM configurations in memory for the current session.
 // In a production environment, this would be persisted in a database.
-const userCrmSessions = {}; // { chatId: { activeCrmAlias: 'alias', crms: { 'alias': { url: '...', isAuthenticated: true } } } }
+const userCrmSessions = {}; // { chatId: { activeCrmAlias: 'alias', crms: { 'alias': { url: '...', isAuthenticated: true, authTimestamp: 1700000000000 } } } }
 
 function initializeUserCrmSession(chatId) {
     if (!userCrmSessions[chatId]) {
@@ -21,9 +25,19 @@ async function getCrmConfig(chatId, alias) {
     return userSession.crms[alias];
 }
 
+/**
+ * Adds a new authenticated CRM instance and sets the current timestamp.
+ * @param {number} chatId
+ * @param {string} alias
+ * @param {string} url
+ */
 async function addAuthenticatedCrm(chatId, alias, url) {
     initializeUserCrmSession(chatId);
-    userCrmSessions[chatId].crms[alias] = { url, isAuthenticated: true };
+    userCrmSessions[chatId].crms[alias] = {
+        url,
+        isAuthenticated: true,
+        authTimestamp: Date.now(), // 👈 NEW: Store the login time
+    };
     // Automatically set as active if it's the first one or explicitly set
     if (!userCrmSessions[chatId].activeCrmAlias) {
         userCrmSessions[chatId].activeCrmAlias = alias;
@@ -44,13 +58,51 @@ function getActiveCrmAlias(chatId) {
     return userCrmSessions[chatId].activeCrmAlias;
 }
 
+/**
+ * Checks if the user's local session for a specific CRM has expired.
+ * @param {number} chatId
+ * @param {string} alias
+ * @returns {boolean} True if the session is expired or invalid.
+ */
+function isSessionExpired(chatId, alias) {
+    const crmConfig = userCrmSessions[chatId]?.crms?.[alias];
+
+    if (!crmConfig || !crmConfig.isAuthenticated || !crmConfig.authTimestamp) {
+        return true; // Not authenticated or data is missing
+    }
+
+    const timeElapsed = Date.now() - crmConfig.authTimestamp;
+
+    // Check if elapsed time is greater than the allowed duration
+    if (timeElapsed > SESSION_DURATION_MS) {
+        // Clear the authentication status when it expires
+        crmConfig.isAuthenticated = false;
+        return true; // Expired
+    }
+
+    return false; // Still valid
+}
+
+/**
+ * Retrieves the active CRM details and API keys, checking for session expiration first.
+ * @param {number} chatId
+ * @returns {Promise<object|null>} Details or null if not authenticated or expired.
+ */
 async function getActiveCrmDetails(chatId) {
     initializeUserCrmSession(chatId);
     const activeAlias = userCrmSessions[chatId].activeCrmAlias;
     if (!activeAlias) {
         return null;
     }
+
+    // --- NEW: Check session expiration before retrieving API keys ---
+    if (isSessionExpired(chatId, activeAlias)) {
+        console.log(`[CRM_MANAGER] Session expired for chat: ${chatId}, alias: ${activeAlias}. User must re-authenticate.`);
+        return null; // Session expired, block access
+    }
+
     const crmConfig = userCrmSessions[chatId].crms[activeAlias];
+    // This check should technically be redundant if isSessionExpired is run, but kept for safety
     if (!crmConfig || !crmConfig.isAuthenticated) {
         return null;
     }
@@ -69,6 +121,7 @@ async function getActiveCrmDetails(chatId) {
         apiSecret: frappeApiKeys.apiSecret,
     };
 }
+// --- Rest of the existing functions (no changes needed) ---
 
 function listUserCrmAliases(chatId) {
     initializeUserCrmSession(chatId);
@@ -86,8 +139,6 @@ function deleteUserCrm(chatId, alias) {
     }
     return false;
 }
-
-// --- New Authentication-Related Functions ---
 
 /**
  * Validates if a given alias exists in our pre-prepared API key store.
