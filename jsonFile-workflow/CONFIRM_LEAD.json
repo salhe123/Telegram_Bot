@@ -2,47 +2,56 @@
   "name": "CONFIRM_LEAD",
   "nodes": [
     {
-      "parameters": {},
-      "name": "Check for Tasks",
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('leadData').item.json.leadData.tasks && $('leadData').item.json.leadData.tasks.length > 0 }}",
+              "value2": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "name": "Check for Tasks1",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        3248,
-        1968
+        3840,
+        3392
       ],
-      "id": "2b2b3524-7115-4d98-bf4c-f0b824f7e77b"
+      "id": "011ccbac-6943-42e3-9ae1-a08fe21cb0fd"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "return {\n  json: {\n    tasks: $('leadData1').item.json.leadData.tasks || []\n  }\n};"
+        "jsCode": "const leadDataItem = $('leadData').item.json;\nconst leadReferenceName = $('Create Lead1').item.json.body.data.name || '';\n\nconst tasks = (leadDataItem.leadData && leadDataItem.leadData.tasks) || [];\n\nconst firstTask = tasks.find(task => typeof task === 'object' && task !== null);\n\nreturn {\n  json: firstTask\n    ? {\n        title: firstTask.title || '', // <--- Fixes $json.title\n        description: firstTask.description || '',\n        due_date: firstTask.due_date || '',\n        \n        leadReferenceName: leadReferenceName,\n        chatId: leadDataItem.chatId || '', // <--- Fixes $json.chatId\n        crmBaseUrl: leadDataItem.crmBaseUrl || '', // <--- Fixes $json.crmBaseUrl\n        frappeApiKey: leadDataItem.frappeApiKey || '',\n        frappeApiSecret: leadDataItem.frappeApiSecret || '',\n        leadName: (leadDataItem.leadData.first_name || '') + ' ' + (leadDataItem.leadData.last_name || '') // <--- Fixes $json.leadName\n      }\n    : {}\n};"
       },
-      "name": "Iterate Tasks",
+      "name": "Iterate Tasks1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3472,
-        1968
+        4064,
+        3392
       ],
-      "id": "5e4e0a38-169c-4613-82e1-d401be13ade8"
+      "id": "392b772f-ae05-49b0-b5bb-ee853f1406fe"
     },
     {
       "parameters": {
         "requestMethod": "POST",
-        "url": "={{ $('Wait for Confirmation').item.json.body.crmBaseUrl }}/api/resource/CRM%20Task",
+        "url": "={{ $json.crmBaseUrl }}/api/resource/CRM%20Task",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={{\nJSON.stringify({\ntitle: $json.tasks[0].title,\ndescription: $json.tasks[0].description || '',\ndue_date: '2025-11-28', // Replace with a valid date string\nreference_doctype: 'CRM Lead',\nreference_name: $('Create Lead').item.json.body.data.name\n})\n}}",
-        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation').item.json.body.frappeApiSecret }}\"\n}"
+        "bodyParametersJson": "={{\nJSON.stringify({\ntitle: $json.title,\ndescription: $json.description || '',\ndue_date: '2025-11-28', // Replace with a valid date string\nreference_doctype: 'CRM Lead',\nreference_name: $json.leadReferenceName\n})\n}}",
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $json.frappeApiKey + ':' + $json.frappeApiSecret }}\"\n}"
       },
-      "name": "Create Task",
+      "name": "Create Task1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        3904,
-        1968
+        4272,
+        3392
       ],
-      "id": "7bb2030e-78e5-4026-894f-f70e45b1ed01"
+      "id": "c1de6b90-1957-4b05-b981-2f6df931690b"
     },
     {
       "parameters": {
@@ -50,59 +59,68 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": {{ $(\"Wait for Confirmation\").item.json.body.chatId }},\n  \"text\": \"Task '{{ $(\"Wait for Confirmation\").item.json.body.leadData.tasks[0].title }}' created for '{{ $(\"Wait for Confirmation\").item.json.body.leadData.first_name + ' ' + $(\"Wait for Confirmation\").item.json.body.leadData.last_name }}'!\\nView all tasks: [Task List]({{ $(\"Wait for Confirmation\").item.json.body.crmBaseUrl + 'crm/tasks/view' }})\",\n  \"parse_mode\": \"Markdown\"\n}\n"
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $(\"Iterate Tasks1\").item.json.chatId }},\n  \"text\": \"Task '{{ $(\"Iterate Tasks1\").item.json.title }}' created for '{{ $(\"Iterate Tasks1\").item.json.leadName }}'!\\nView all tasks: [Task List]({{ $(\"Iterate Tasks1\").item.json.crmBaseUrl + 'crm/tasks/view' }})\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
-      "name": "Send Task Confirmation",
+      "name": "Send Task Confirmation1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        4128,
-        1968
+        4480,
+        3392
       ],
-      "id": "6bef64a1-be22-4610-883e-e10389bf8512"
+      "id": "f64bb67b-abc7-499d-9e84-b1e4b2bdd706"
     },
     {
-      "parameters": {},
-      "name": "Check for Notes",
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('leadData').item.json.leadData.notes && $('leadData').item.json.leadData.notes.length > 0 }}",
+              "value2": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "name": "Check for Notes1",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        3248,
-        2160
+        3840,
+        3584
       ],
-      "id": "d8726b5e-12f8-4046-be53-68eefead4ced"
+      "id": "988644a7-1b1b-4003-b9d6-19e19357a3b9"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "return {\n  json: {\n    tasks: $('leadData1').item.json.leadData.notes || []\n  }\n};"
+        "jsCode": "const leadDataItem = $('leadData').item.json;\n// Safely get the CRM lead name created by the previous step\nconst leadReferenceName = $('Create Lead1').item.json.body.data.name || '';\n\n// Safely access the notes array\nconst notes = (leadDataItem.leadData && leadDataItem.leadData.notes) || [];\n\n// Find the first valid note object\nconst firstNote = notes.find(note => typeof note === 'object' && note !== null);\n\n// Return a single item, or an empty object if no valid note was found\nreturn {\n  json: firstNote\n    ? {\n        // Explicitly map note properties (safely handling null/undefined)\n        title: firstNote.title || '',\n        content: firstNote.content || '',\n        \n        // Add necessary context data\n        leadReferenceName: leadReferenceName,\n        chatId: leadDataItem.chatId || '',\n        crmBaseUrl: leadDataItem.crmBaseUrl || '',\n        frappeApiKey: leadDataItem.frappeApiKey || '',\n        frappeApiSecret: leadDataItem.frappeApiSecret || '',\n        leadName: (leadDataItem.leadData.first_name || '') + ' ' + (leadDataItem.leadData.last_name || '')\n      }\n    : {}\n};"
       },
-      "name": "Iterate Notes",
+      "name": "Iterate Notes1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3472,
-        2160
+        4064,
+        3584
       ],
-      "id": "cc0ebf4a-b30d-461d-b367-7d01d00db2b0"
+      "id": "c7b595e7-3676-47a4-b9cd-adff18931c06"
     },
     {
       "parameters": {
         "requestMethod": "POST",
-        "url": "={{ $('Wait for Confirmation').item.json.body.crmBaseUrl }}/api/resource/FCRM%20Note",
+        "url": "={{ $json.crmBaseUrl }}/api/resource/FCRM%20Note",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={{ {\ntitle: $json.tasks[0].title,\ncontent: $json.tasks[0].content || '',\nreference_doctype: \"CRM Lead\",\nreference_name: $(\"Create Lead\").item.json.body.data.name\n} }}",
-        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation').item.json.body.frappeApiSecret }}\"\n}"
+        "bodyParametersJson": "={{ {\ntitle: $json.title,\ncontent: $json.content || $json.description || '',\nreference_doctype: \"CRM Lead\",\nreference_name: $json.leadReferenceName\n} }}",
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $json.frappeApiKey + ':' + $json.frappeApiSecret }}\"\n}"
       },
-      "name": "Create Note",
+      "name": "Create Note1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        3696,
-        2160
+        4288,
+        3584
       ],
-      "id": "141714f3-89c8-434b-a981-02a14ecf8000"
+      "id": "45ad0939-5f39-4f90-92d4-6687a76fe082"
     },
     {
       "parameters": {
@@ -110,16 +128,16 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n\"chat_id\": {{ $(\"Wait for Confirmation\").item.json.body.chatId }},\n\"text\": \"Note '{{ $(\"Wait for Confirmation\").item.json.body.leadData.notes[0].title }}' created for '{{ $(\"Wait for Confirmation\").item.json.body.leadData.first_name + ' ' + $(\"Wait for Confirmation\").item.json.body.leadData.last_name }}'!\\nView all notes: [note List]({{ $(\"Wait for Confirmation\").item.json.body.crmBaseUrl + 'crm/notes/view' }})\",\n\"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $(\"Iterate Notes1\").item.json.chatId }},\n  \"text\": \"Note '{{ $(\"Iterate Notes1\").item.json.title }}' created for '{{ $(\"Iterate Notes1\").item.json.leadName }}'!\\nView all notes: [note List]({{ $(\"Iterate Notes1\").item.json.crmBaseUrl + 'crm/notes/view' }})\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
-      "name": "Send Note Confirmation",
+      "name": "Send Note Confirmation1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        3920,
-        2160
+        4496,
+        3584
       ],
-      "id": "24e8e661-415c-4c65-b59f-8658c29f17df"
+      "id": "a4df0d6f-5446-4226-a703-27b4acf0558c"
     },
     {
       "parameters": {
@@ -130,11 +148,11 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        2128,
-        2256
+        2528,
+        3680
       ],
-      "id": "779b80da-0ca8-4265-a307-18a40cfaa3a1",
-      "name": "Wait for Confirmation",
+      "id": "f764da15-fe33-4a0e-bd11-fe67cf16081e",
+      "name": "Wait for Confirmation1",
       "webhookId": "f69f5152-6e49-41f0-a5a2-9424e8e4310e"
     },
     {
@@ -155,14 +173,14 @@
           ]
         }
       },
-      "name": "Check Mandatory Fields",
+      "name": "Check Mandatory Fields1",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
       "position": [
-        2576,
-        2224
+        2976,
+        3648
       ],
-      "id": "45f22abc-e1a3-4503-97db-9ac9ae4cb4b5"
+      "id": "bf4470fc-64c4-4413-adb1-d0bed808d2ba"
     },
     {
       "parameters": {
@@ -172,14 +190,14 @@
         "options": {},
         "bodyParametersJson": "={{\n  \"chat_id\": $json.chatId,\n  \"text\": \"Please provide your *First Name* to create the lead it is mandatory so Record again please!\",\n  \"parse_mode\": \"Markdown\"\n}}"
       },
-      "name": "Prompt User",
+      "name": "Prompt User1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        2800,
-        2352
+        3200,
+        3776
       ],
-      "id": "ef1a62f0-4e5a-406f-9fd6-ad3b93f3954f"
+      "id": "c405accd-414f-4f61-b4bc-4b6e4ac8fd91"
     },
     {
       "parameters": {
@@ -190,16 +208,16 @@
           "fullResponse": true
         },
         "bodyParametersJson": "={{ $json.leadData }}",
-        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation').item.json.body.frappeApiSecret }}\"\n}"
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation1').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation1').item.json.body.frappeApiSecret }}\"\n}"
       },
-      "name": "Create Lead",
+      "name": "Create Lead1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        2800,
-        2160
+        3200,
+        3584
       ],
-      "id": "c4d3651b-db17-4ccf-b768-24de930d4eee",
+      "id": "63577e28-89ca-431a-a7e3-a686f152a078",
       "alwaysOutputData": false,
       "executeOnce": false,
       "retryOnFail": false
@@ -210,30 +228,30 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={{\nJSON.stringify({\nchat_id: $(\"Wait for Confirmation\").item.json.body.chatId,\ntext: \"Lead created! View here: \" + $(\"Wait for Confirmation\").item.json.body.crmBaseUrl + \"app/crm-lead/\" + ($(\"Create Lead\").item.json.body.data.name || 'unknown'),\nparse_mode: \"Markdown\"\n})\n}}"
+        "bodyParametersJson": "={{\nJSON.stringify({\nchat_id: $(\"Wait for Confirmation1\").item.json.body.chatId,\ntext: \"Lead created! View here: \" + $(\"Wait for Confirmation1\").item.json.body.crmBaseUrl + \"app/crm-lead/\" + ($(\"Create Lead1\").item.json.body.data.name || 'unknown'),\nparse_mode: \"Markdown\"\n})\n}}"
       },
-      "name": "Send CRM Link",
+      "name": "Send CRM Link1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        3024,
-        2256
+        3632,
+        3680
       ],
-      "id": "fbf0630c-61bb-4008-8f85-74198206255b"
+      "id": "e982b899-00f0-4ff3-a8ee-3f9b38b7478e"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const leadData = $json.body.leadData;\n\nreturn {\n  json: {\n    draftId: $json.body.draftId,\n    chatId: $json.body.chatId,\n    crmBaseUrl: $json.body.crmBaseUrl,\n    leadData\n  }\n};"
+        "jsCode": "const leadData = { ...$json.body.leadData };\n\n// Remove tasks if empty, but ensure we keep the array if it has data\nif (Array.isArray(leadData.tasks) && leadData.tasks.length === 0) {\n  delete leadData.tasks;\n}\n\n// Remove notes if empty, but ensure we keep the array if it has data\nif (Array.isArray(leadData.notes) && leadData.notes.length === 0) {\n  delete leadData.notes;\n}\n\nreturn {\n  json: {\n    draftId: $json.body.draftId,\n    chatId: $json.body.chatId,\n    crmBaseUrl: $json.body.crmBaseUrl,\n    // Ensure we also pass API keys for later steps\n    frappeApiKey: $json.body.frappeApiKey,\n    frappeApiSecret: $json.body.frappeApiSecret,\n    leadData\n  }\n};\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2352,
-        2256
+        2752,
+        3680
       ],
-      "id": "9edac965-adff-49fa-92db-648e823296c0",
-      "name": "leadData1"
+      "id": "ef476d96-b6f8-43f5-ab84-36b993e05c69",
+      "name": "leadData"
     },
     {
       "parameters": {
@@ -246,202 +264,150 @@
           ]
         }
       },
-      "name": "Lead Created?1",
+      "name": "Lead Created?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        3024,
-        2064
+        3440,
+        3584
       ],
-      "id": "708e8f8f-d2b0-42b4-a1ea-3e32c6f5dafe"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "507435a5-6431-47c1-a7dd-681a7eea4fe9",
-              "leftValue": "={{ $json.tasks.length }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "equals",
-                "name": "filter.operator.equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        3680,
-        1968
-      ],
-      "id": "7a1d53db-8ca1-4a8e-8f8f-edbec34207de",
-      "name": "If"
+      "id": "20e2a234-726a-47c8-b5ec-120544e346b3"
     }
   ],
   "pinData": {},
   "connections": {
-    "Check for Tasks": {
+    "Check for Tasks1": {
       "main": [
         [
           {
-            "node": "Iterate Tasks",
+            "node": "Iterate Tasks1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Iterate Tasks": {
+    "Iterate Tasks1": {
       "main": [
         [
           {
-            "node": "If",
+            "node": "Create Task1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Create Task": {
+    "Create Task1": {
       "main": [
         [
           {
-            "node": "Send Task Confirmation",
+            "node": "Send Task Confirmation1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check for Notes": {
+    "Check for Notes1": {
       "main": [
         [
           {
-            "node": "Iterate Notes",
+            "node": "Iterate Notes1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Iterate Notes": {
+    "Iterate Notes1": {
       "main": [
         [
           {
-            "node": "Create Note",
+            "node": "Create Note1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Create Note": {
+    "Create Note1": {
       "main": [
         [
           {
-            "node": "Send Note Confirmation",
+            "node": "Send Note Confirmation1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Wait for Confirmation": {
+    "Wait for Confirmation1": {
       "main": [
         [
           {
-            "node": "leadData1",
+            "node": "leadData",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check Mandatory Fields": {
+    "Check Mandatory Fields1": {
       "main": [
         [
           {
-            "node": "Create Lead",
+            "node": "Create Lead1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Prompt User",
+            "node": "Prompt User1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Create Lead": {
+    "Create Lead1": {
       "main": [
         [
           {
-            "node": "Lead Created?1",
+            "node": "Lead Created?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "leadData": {
+      "main": [
+        [
+          {
+            "node": "Check Mandatory Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Created?": {
+      "main": [
+        [
+          {
+            "node": "Send CRM Link1",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Send CRM Link",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "leadData1": {
-      "main": [
-        [
-          {
-            "node": "Check Mandatory Fields",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Lead Created?1": {
-      "main": [
-        [
-          {
-            "node": "Check for Tasks",
+            "node": "Check for Tasks1",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Check for Notes",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Check for Notes",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "If": {
-      "main": [
-        [
-          {
-            "node": "Create Task",
+            "node": "Check for Notes1",
             "type": "main",
             "index": 0
           }
@@ -453,7 +419,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "8650aeaf-1e5b-426d-a502-7c7d8d9429c2",
+  "versionId": "9b9563e4-35cb-4fea-9b69-ececdd4c9cd9",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"
