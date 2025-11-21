@@ -21,7 +21,7 @@ function setupCommands() {
     bot.onText(/\/start/, (msg) => {
         const chatId = msg.chat.id;
         console.log(`[COMMAND /start] chatId: ${chatId}`);
-        bot.sendMessage(chatId, "Welcome to Frappe CRM Bot!", {
+        bot.sendMessage(chatId, "Welcome to Fr8labs CRM Bot!", {
             reply_markup: {
                 inline_keyboard: [
                     [{ text: "Create Lead", callback_data: "creat_lead" }],
