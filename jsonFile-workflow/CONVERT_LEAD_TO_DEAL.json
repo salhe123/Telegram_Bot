@@ -1,5 +1,5 @@
 {
-  "name": "CONVERT_LEAD_TO_DEAL",
+  "name": "CONVERT_LEAD_TO_DEAL_V2",
   "nodes": [
     {
       "parameters": {
@@ -43,41 +43,17 @@
     },
     {
       "parameters": {
-        "authentication": "headerAuth",
-        "requestMethod": "PUT",
-        "url": "={{ $(\"Webhook\").item.json.body.crmBaseUrl }}/api/resource/Lead/{{ $(\"Webhook\").item.json.body.leadName }}",
-        "jsonParameters": true,
-        "options": {},
-        "bodyParametersJson": "{\n  \"status\": \"Converted\"\n}"
-      },
-      "name": "Update Lead Status",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [
-        448,
-        0
-      ],
-      "id": "9489a3f4-e631-4890-94ad-e8defb344d01",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "usDoofPm00vuGNxF",
-          "name": "Header Auth account"
-        }
-      }
-    },
-    {
-      "parameters": {
         "requestMethod": "POST",
         "url": "https://api.telegram.org/bot{{ $(\"Webhook\").item.json.body.telegramBotToken }}/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "{\n  \"chat_id\": {{ $(\"Webhook\").item.json.body.chatId }},\n  \"text\": \"Lead '{{ $(\"Webhook\").item.json.body.leadName }}' converted to Deal and status updated!\",\n  \"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "{\n  \"chat_id\": {{ $(\"Webhook\").item.json.body.chatId }},\n  \"text\": \"Lead '{{ $(\"Webhook\").item.json.body.leadName }}' successfully converted to a Deal!\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
       "name": "Send Confirmation",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        672,
+        448,
         0
       ],
       "id": "b4b31d8c-945a-4819-99d3-5dd176a04971"
@@ -100,17 +76,6 @@
       "main": [
         [
           {
-            "node": "Update Lead Status",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Update Lead Status": {
-      "main": [
-        [
-          {
             "node": "Send Confirmation",
             "type": "main",
             "index": 0
@@ -123,10 +88,9 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "2a93f596-26d3-4b27-be60-f9373d631076",
+  "versionId": "b1f8c7e0-d4d1-4a5f-b2e3-2e91a0c1f4e5",
   "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"
+    "templateCredsSetupCompleted": true
   },
   "id": "9B3i436QPII2p0IW",
   "tags": []

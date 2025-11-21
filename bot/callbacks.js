@@ -16,6 +16,10 @@ function setupCallbacks() {
       filters: {},
       doctype: "CRM Lead", // Default doctype for search
     };
+    
+    // Acknowledge the callback immediately for responsiveness
+    await bot.answerCallbackQuery(query.id); 
+
 
     if (action === "creat_lead") {
       console.log(`[CALLBACK] creat_lead to prompt voice`);
@@ -53,18 +57,62 @@ function setupCallbacks() {
           parse_mode: "Markdown",
         }
       );
-    } else if (action.startsWith("select_lead:")) {
+    } 
+    
+    // === NEW: Handle Update Lead from Search Results ===
+    else if (action.startsWith("update_lead:")) {
       const leadName = action.split(":")[1];
-      console.log(`[CALLBACK] select_lead to selected: ${leadName}`);
-      bot.session[chatId].selectedDocName = leadName; // Use generic selectedDocName
+      console.log(`[CALLBACK] update_lead to selected: ${leadName}`);
+      bot.session[chatId].selectedDocName = leadName; 
       bot.session[chatId].currentDoctype = "CRM Lead";
-      console.log(`[CALLBACK] select_lead to saved: ${leadName}`);
       await bot.sendMessage(
         chatId,
-        `Selected: *${leadName}*\n\nSend *voice* to update.`,
+        `Selected to **Update** Lead: *${leadName}*\n\nSend *voice* with the update details.`,
         { parse_mode: "Markdown" }
       );
-    } else if (action.startsWith("select_deal:")) {
+    } 
+
+    // === NEW: Handle Convert Lead to Deal from Search Results ===
+    else if (action.startsWith("convert_lead:")) {
+        const leadName = action.split(":")[1];
+        console.log(`[CALLBACK] convert_lead selected: ${leadName}`);
+
+        const activeCrm = await crmManager.getActiveCrmDetails(chatId);
+        if (!activeCrm) {
+            await bot.sendMessage(chatId, "No active CRM selected or authenticated. Use `/login` to set up your CRM.");
+            return;
+        }
+
+        try {
+            await bot.editMessageText(`Initiating conversion of Lead *${leadName}* to Deal...`, {
+                chat_id: chatId,
+                message_id: query.message.message_id,
+                parse_mode: "Markdown"
+            });
+            
+            // Trigger the n8n webhook for conversion
+            await axios.post(process.env.N8N_CONVERT_LEAD_WEBHOOK_URL, {
+                chatId,
+                crmBaseUrl: activeCrm.url,
+                frappeApiKey: activeCrm.apiKey,
+                frappeApiSecret: activeCrm.apiSecret,
+                leadName: leadName,
+                telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
+            });
+            
+            // The n8n workflow sends the final success message, so we just acknowledge initiation here.
+        } catch (error) {
+            console.error("[CALLBACK_CONVERT_LEAD] ERROR:", error.response?.data || error.message);
+            await bot.editMessageText(`Failed to convert lead *${leadName}*. Check CRM details and n8n webhook.`, {
+                chat_id: chatId,
+                message_id: query.message.message_id,
+                parse_mode: "Markdown"
+            });
+        }
+    } 
+    
+    // === Original select_lead is now handled by update_lead: (above), keeping select_deal:
+    else if (action.startsWith("select_deal:")) {
       const dealName = action.split(":")[1];
       console.log(`[CALLBACK] select_deal to selected: ${dealName}`);
       bot.session[chatId].selectedDocName = dealName; // Use generic selectedDocName
@@ -377,18 +425,15 @@ function setupCallbacks() {
     } else if (action.startsWith("more_")) {
       const doctype = action.split("_")[1] === "lead" ? "CRM Lead" : "CRM Deal";
       bot.session[chatId].search.page += 1;
-      bot.answerCallbackQuery(query.id);
-      await runSearch(chatId, bot.session[chatId].search.query, doctype);
+      await runSearch(chatId, null, doctype);
     } else if (action.startsWith("prev_")) {
       const doctype = action.split("_")[1] === "lead" ? "CRM Lead" : "CRM Deal";
       if (bot.session[chatId].search.page > 1) {
         bot.session[chatId].search.page -= 1;
-        bot.answerCallbackQuery(query.id);
-        await runSearch(chatId, bot.session[chatId].search.query, doctype);
+        await runSearch(chatId, null, doctype); 
       }
     } else if (action.startsWith("filter_")) {
       const doctype = action.split("_")[1] === "lead" ? "CRM Lead" : "CRM Deal";
-      bot.answerCallbackQuery(query.id);
       await bot.sendMessage(
         chatId,
         `Filter ${doctype.toLowerCase()} by:\n\`owner:glenn\`\n\`status:Open\`\n\nSend: 
@@ -397,8 +442,6 @@ function setupCallbacks() {
         { parse_mode: "Markdown" }
       );
     }
-
-    bot.answerCallbackQuery(query.id);
   });
 }
 
