@@ -275,7 +275,7 @@ Need help? Just type /help!
         };
         bot.session[chatId].search.page = 1;
 
-        await runSearch(chatId, input, "CRM Deal"); // Pass doctype
+        await runSearch(chatId, input, "CRM Deal"); 
     });
 }
 

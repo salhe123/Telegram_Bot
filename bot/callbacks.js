@@ -20,10 +20,11 @@ function setupCallbacks() {
     // Acknowledge the callback immediately for responsiveness
     await bot.answerCallbackQuery(query.id); 
 
-
+    // === Core Actions (Create/Update Entry Points) ===
     if (action === "creat_lead") {
       console.log(`[CALLBACK] creat_lead to prompt voice`);
       bot.session[chatId].currentDoctype = "CRM Lead"; // Set current doctype for voice input
+      bot.session[chatId].selectedDocName = null; // Clear docName for creation
       await bot.sendMessage(
         chatId,
         "Send a *voice message* with lead details.\nUse `/usecrm <alias>` to select a CRM first.",
@@ -42,6 +43,7 @@ function setupCallbacks() {
     } else if (action === "creat_deal") {
       console.log(`[CALLBACK] creat_deal to prompt voice`);
       bot.session[chatId].currentDoctype = "CRM Deal"; // Set current doctype for voice input
+      bot.session[chatId].selectedDocName = null; // Clear docName for creation
       await bot.sendMessage(
         chatId,
         "Send a *voice message* with deal details.\nUse `/usecrm <alias>` to select a CRM first.",
@@ -59,11 +61,11 @@ function setupCallbacks() {
       );
     } 
     
-    // === NEW: Handle Update Lead from Search Results ===
+    // === Search Result Selection Actions ===
     else if (action.startsWith("update_lead:")) {
       const leadName = action.split(":")[1];
       console.log(`[CALLBACK] update_lead to selected: ${leadName}`);
-      bot.session[chatId].selectedDocName = leadName; 
+      bot.session[chatId].selectedDocName = leadName; // Set lead name for update
       bot.session[chatId].currentDoctype = "CRM Lead";
       await bot.sendMessage(
         chatId,
@@ -71,8 +73,20 @@ function setupCallbacks() {
         { parse_mode: "Markdown" }
       );
     } 
-
-    // === NEW: Handle Convert Lead to Deal from Search Results ===
+    
+    else if (action.startsWith("select_deal:")) {
+      const dealName = action.split(":")[1];
+      console.log(`[CALLBACK] select_deal to selected: ${dealName}`);
+      bot.session[chatId].selectedDocName = dealName; // Set deal name for update
+      bot.session[chatId].currentDoctype = "CRM Deal";
+      await bot.sendMessage(
+        chatId,
+        `Selected to **Update** Deal: *${dealName}*\n\nSend *voice* with the update details.`,
+        { parse_mode: "Markdown" }
+      );
+    } 
+    
+    // === Lead Conversion Action ===
     else if (action.startsWith("convert_lead:")) {
         const leadName = action.split(":")[1];
         console.log(`[CALLBACK] convert_lead selected: ${leadName}`);
@@ -100,7 +114,6 @@ function setupCallbacks() {
                 telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
             });
             
-            // The n8n workflow sends the final success message, so we just acknowledge initiation here.
         } catch (error) {
             console.error("[CALLBACK_CONVERT_LEAD] ERROR:", error.response?.data || error.message);
             await bot.editMessageText(`Failed to convert lead *${leadName}*. Check CRM details and n8n webhook.`, {
@@ -111,19 +124,8 @@ function setupCallbacks() {
         }
     } 
     
-    // === Original select_lead is now handled by update_lead: (above), keeping select_deal:
-    else if (action.startsWith("select_deal:")) {
-      const dealName = action.split(":")[1];
-      console.log(`[CALLBACK] select_deal to selected: ${dealName}`);
-      bot.session[chatId].selectedDocName = dealName; // Use generic selectedDocName
-      bot.session[chatId].currentDoctype = "CRM Deal";
-      console.log(`[CALLBACK] select_deal to saved: ${dealName}`);
-      await bot.sendMessage(
-        chatId,
-        `Selected: *${dealName}*\n\nSend *voice* to update.`,
-        { parse_mode: "Markdown" }
-      );
-    } else if (action.startsWith("confirm_draft:")) {
+    // === Confirm Lead Draft ===
+    else if (action.startsWith("confirm_draft:")) {
       const draftId = action.split(":")[1];
 
       const activeCrmAlias = crmManager.getActiveCrmAlias(chatId);
@@ -153,7 +155,7 @@ function setupCallbacks() {
       const frappeApiKey = activeCrm.apiKey;
       const frappeApiSecret = activeCrm.apiSecret;
 
-      // Prefer original draft data stored in session if available and matches draftId
+      // Prefer original draft data stored in session if available
       let leadDataObj = null;
       if (
         bot.session[chatId] &&
@@ -163,7 +165,7 @@ function setupCallbacks() {
       ) {
         leadDataObj = bot.session[chatId].draft.leadData;
       } else {
-        // Fallback: parse displayed message including nested Tasks/Notes
+        // Fallback: parse displayed message (kept for full coverage)
         leadDataObj = {};
         leadDataObj.tasks = [];
         leadDataObj.notes = [];
@@ -172,11 +174,9 @@ function setupCallbacks() {
         let currentSection = null;
 
         for (const rawLine of lines) {
-          // remove formatting asterisks but preserve indentation for nested items
           const line = rawLine.replace(/\*/g, "").replace(/\r/g, "");
           if (!line.trim()) continue;
 
-          // Top-level bullet like: • First Name: Alice
           const topMatch = line.trim().match(/^•\s*(.+?):\s*(.*)$/);
           if (topMatch) {
             const key = topMatch[1].trim().toLowerCase().replace(/ /g, "_");
@@ -195,31 +195,6 @@ function setupCallbacks() {
             }
           }
 
-          // Nested item lines under Tasks/Notes, e.g. "- title: Follow up..., description: ..., due_date: ..."
-          const nestedMatch = line.match(/^\s*-\s*(.+)$/);
-          if (nestedMatch && currentSection) {
-            const payload = nestedMatch[1].trim();
-            const obj = {};
-            const parts = payload
-              .split(",")
-              .map((p) => p.trim())
-              .filter(Boolean);
-            for (const part of parts) {
-              const kv = part.split(":");
-              if (kv.length >= 2) {
-                const k = kv[0].trim().toLowerCase().replace(/ /g, "_");
-                const v = kv.slice(1).join(":").trim();
-                obj[k] = v;
-              } else {
-                obj.text = part;
-              }
-            }
-            if (currentSection === "tasks") leadDataObj.tasks.push(obj);
-            if (currentSection === "notes") leadDataObj.notes.push(obj);
-            continue;
-          }
-
-          // Lines that look like indented nested properties (e.g. "    - title: ...")
           const indentedMatch = rawLine.match(/^\s+[-•]\s*(.+)$/);
           if (indentedMatch && currentSection) {
             const payload = indentedMatch[1].trim();
@@ -271,6 +246,7 @@ function setupCallbacks() {
           frappeApiKey,
           frappeApiSecret,
           leadData: leadDataObj,
+          // For future: add isUpdate/docName logic here if Lead Updates get the same confirmation flow
         });
 
         await bot.editMessageText("Waiting for CRM...", {
@@ -284,8 +260,10 @@ function setupCallbacks() {
           message_id: query.message.message_id,
         });
       }
-      // ... existing code ...
-    } else if (action.startsWith("confirm_deal_draft:")) {
+    } 
+    
+    // === Confirm Deal Draft (Updated to handle Create/Update) ===
+    else if (action.startsWith("confirm_deal_draft:")) {
       const draftId = action.split(":")[1];
 
       const activeCrmAlias = crmManager.getActiveCrmAlias(chatId);
@@ -317,7 +295,7 @@ function setupCallbacks() {
       const frappeApiKey = activeCrm.apiKey;
       const frappeApiSecret = activeCrm.apiSecret;
 
-      // --- START: ADVANCED DATA PARSING (Same as Lead Logic) ---
+      // --- START: ADVANCED DATA PARSING (Get Deal Data) ---
       const dealDataObj = {};
       dealDataObj.tasks = [];
       dealDataObj.notes = [];
@@ -326,11 +304,9 @@ function setupCallbacks() {
       let currentSection = null;
 
       for (const rawLine of lines) {
-        // remove formatting asterisks but preserve indentation for nested items
         const line = rawLine.replace(/\*/g, "").replace(/\r/g, "");
         if (!line.trim()) continue;
 
-        // 1. Top-level bullet like: • Deal Name: Project X
         const topMatch = line.trim().match(/^•\s*(.+?):\s*(.*)$/);
         if (topMatch) {
           const key = topMatch[1].trim().toLowerCase().replace(/ /g, "_");
@@ -349,7 +325,6 @@ function setupCallbacks() {
           }
         }
 
-        // 2. Nested item lines under Tasks/Notes
         const indentedMatch = rawLine.match(/^\s+[-•]\s*(.+)$/);
         if (indentedMatch && currentSection) {
           const payload = indentedMatch[1].trim();
@@ -374,7 +349,7 @@ function setupCallbacks() {
         }
       }
 
-      // Ensure arrays exist and are arrays (important for n8n iterators)
+      // Ensure arrays exist and are arrays
       dealDataObj.tasks = Array.isArray(dealDataObj.tasks)
         ? dealDataObj.tasks
         : dealDataObj.tasks
@@ -386,9 +361,13 @@ function setupCallbacks() {
           ? [dealDataObj.notes]
           : [];
       // --- END: ADVANCED DATA PARSING ---
+      
+      // === NEW LOGIC: DETERMINE IF IT'S AN UPDATE ===
+      const isUpdate = !!bot.session[chatId].selectedDocName;
+      const docName = bot.session[chatId].selectedDocName; // The CRM-DEAL-XXXX name
 
       try {
-        await bot.editMessageText("Creating deal...", {
+        await bot.editMessageText(`${isUpdate ? 'Updating' : 'Creating'} deal...`, {
           chat_id: chatId,
           message_id: query.message.message_id,
         });
@@ -401,7 +380,12 @@ function setupCallbacks() {
           frappeApiKey,
           frappeApiSecret,
           dealData: dealDataObj,
+          isUpdate: isUpdate, 
+          docName: docName,   
         });
+
+        // Clear the selectedDocName after triggering the confirmation webhook
+        bot.session[chatId].selectedDocName = null; 
 
         await bot.editMessageText("Waiting for CRM...", {
           chat_id: chatId,
@@ -409,7 +393,7 @@ function setupCallbacks() {
         });
       } catch (err) {
         console.error("[ERROR]", err.response?.data || err.message);
-        await bot.editMessageText("Error creating deal.", {
+        await bot.editMessageText("Error creating/updating deal.", {
           chat_id: chatId,
           message_id: query.message.message_id,
         });
@@ -420,6 +404,8 @@ function setupCallbacks() {
         chat_id: chatId,
         message_id: query.message.message_id,
       });
+      // Clear the selected document name upon cancellation
+      bot.session[chatId].selectedDocName = null;
 
       // === More / Previous / Filter ===
     } else if (action.startsWith("more_")) {
