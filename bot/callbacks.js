@@ -124,7 +124,7 @@ function setupCallbacks() {
         }
     } 
     
-    // === Confirm Lead Draft (Fixed to ensure isUpdate/docName are sent) ===
+    // === Confirm Lead Draft (FIXED: Added robust session/text parsing) ===
     else if (action.startsWith("confirm_lead_draft:")) { // Renamed from confirm_draft:
       const draftId = action.split(":")[1];
 
@@ -232,9 +232,20 @@ function setupCallbacks() {
           ? [leadDataObj.notes]
           : [];
 
-      // === LOGIC TO DETERMINE IF IT'S AN UPDATE (Based on session) ===
-      const isUpdate = !!bot.session[chatId].selectedDocName;
-      const docName = bot.session[chatId].selectedDocName; // The CRM-LEAD-XXXX name
+      // === LOGIC TO DETERMINE IF IT'S AN UPDATE (FIXED: Robust session/text parsing) ===
+      let docName = bot.session[chatId].selectedDocName; // Check session first
+
+      // FALLBACK: If session is empty, parse the docName from the message text
+      if (!docName) {
+          const text = query.message.text;
+          const match = text.match(/\[UPDATING LEAD: (.+?)\]/); // Look for the document ID in the message
+          if (match) {
+              docName = match[1].trim();
+              console.log(`[CALLBACK_FIX] Recovered Lead docName from message text: ${docName}`);
+          }
+      }
+
+      const isUpdate = !!docName; // isUpdate will be true if docName is found
 
       try {
         await bot.editMessageText(`${isUpdate ? 'Updating' : 'Creating'} lead...`, { 
@@ -270,7 +281,7 @@ function setupCallbacks() {
       }
     } 
     
-    // === Confirm Deal Draft (Fixed to ensure isUpdate/docName are sent) ===
+    // === Confirm Deal Draft (FIXED: Added robust session/text parsing) ===
     else if (action.startsWith("confirm_deal_draft:")) {
       const draftId = action.split(":")[1];
 
@@ -371,9 +382,20 @@ function setupCallbacks() {
           : [];
       // --- END: ADVANCED DATA PARSING ---
       
-      // === LOGIC TO DETERMINE IF IT'S AN UPDATE (Based on session) ===
-      const isUpdate = !!bot.session[chatId].selectedDocName;
-      const docName = bot.session[chatId].selectedDocName; // The CRM-DEAL-XXXX name
+      // === LOGIC TO DETERMINE IF IT'S AN UPDATE (FIXED: Robust session/text parsing) ===
+      let docName = bot.session[chatId].selectedDocName; // Check session first
+
+      // FALLBACK: If session is empty, parse the docName from the message text
+      if (!docName) {
+          const text = query.message.text;
+          const match = text.match(/\[UPDATING DEAL: (.+?)\]/); // Look for the document ID in the message
+          if (match) {
+              docName = match[1].trim();
+              console.log(`[CALLBACK_FIX] Recovered Deal docName from message text: ${docName}`);
+          }
+      }
+
+      const isUpdate = !!docName; // isUpdate will be true if docName is found
 
       try {
         await bot.editMessageText(`${isUpdate ? 'Updating' : 'Creating'} deal...`, {
@@ -389,12 +411,12 @@ function setupCallbacks() {
           frappeApiKey,
           frappeApiSecret,
           dealData: dealDataObj,
-          isUpdate: isUpdate,  // PASS THE FLAG TO N8N (FIX)
-          docName: docName,    // PASS THE DOCUMENT ID TO N8N (FIX)
+          isUpdate: isUpdate,  // PASS THE CORRECTED FLAG TO N8N
+          docName: docName,    // PASS THE CORRECTED DOCUMENT ID TO N8N
         });
 
         // Clear the selectedDocName after triggering the confirmation webhook
-        bot.session[chatId].selectedDocName = null; // Clear session reference (FIX)
+        bot.session[chatId].selectedDocName = null; // Clear session reference
 
         await bot.editMessageText("Waiting for CRM...", {
           chat_id: chatId,
