@@ -24,20 +24,20 @@
     {
       "parameters": {
         "requestMethod": "PUT",
-        "url": "={{ $json.crmBaseUrl }}/api/resource/CRM%20Deal/{{ $json.docName }}",
+        "url": "={{ $('Wait for Confirmation1').item.json.body.crmBaseUrl }}api/resource/CRM%20Deal/{{ $('Wait for Confirmation1').item.json.body.docName }}",
         "jsonParameters": true,
         "options": {
           "fullResponse": true
         },
-        "bodyParametersJson": "={{ $json.dealData }}",
+        "bodyParametersJson": "={{ $('Clean Deal Payload').item.json }}",
         "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation1').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation1').item.json.body.frappeApiSecret }}\"\n}"
       },
       "name": "Update Deal",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        448,
-        928
+        656,
+        1040
       ],
       "id": "20c6ab5a-eeb6-4a1d-9725-18682adbae29",
       "alwaysOutputData": false,
@@ -53,7 +53,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        672,
+        880,
         1104
       ],
       "id": "2ace1c9c-c9f5-4d87-87d7-24b9223ad724"
@@ -73,7 +73,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        672,
+        880,
         720
       ],
       "id": "2de759d4-4b5e-4a80-bb48-ded343c79573"
@@ -93,7 +93,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        672,
+        880,
         560
       ],
       "id": "3cf6e6dd-6906-42f5-9681-0c1b73cdbf9f"
@@ -107,7 +107,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        896,
+        1104,
         560
       ],
       "id": "456a5623-b079-47d1-a955-8af61584789a"
@@ -127,7 +127,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        1104,
+        1312,
         560
       ],
       "id": "6b3ddc36-4de0-4b9c-83d4-beaae1e53f9e"
@@ -138,13 +138,13 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": {{ $(\"dealData\").item.json.chatId }},\n  \"text\": \"Task '{{ $(\"dealData\").item.json.dealData.tasks[0].title }}' created for Deal '{{ $(\"dealData\").item.json.dealData.name }}'!\",\n  \"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $(\"dealData\").item.json.chatId }},\n  \"text\": \"Task '{{ $(\"dealData\").item.json.dealData.tasks[0].title }}' created for Deal *{{ $(\"dealData\").item.json.dealData.name }}*!\\n\\nView Deal: [{{ $(\"dealData\").item.json.docName }}]({{ $(\"dealData\").item.json.crmBaseUrl }}/app/crm-deal/{{ $(\"dealData\").item.json.docName }})\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
       "name": "Send Task Confirmation1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        1312,
+        1520,
         560
       ],
       "id": "a938920c-d0bb-4426-9965-b8f8dfcf3d30"
@@ -164,7 +164,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        672,
+        880,
         896
       ],
       "id": "33fa3022-f294-4db3-b289-3066acac0886"
@@ -178,7 +178,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        896,
+        1104,
         880
       ],
       "id": "9ec1d5e4-215f-46c8-a22a-3079c1556704"
@@ -198,7 +198,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        1120,
+        1328,
         880
       ],
       "id": "f50f51e4-359a-41b4-9e55-01cb712621a9"
@@ -209,13 +209,13 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": {{ $(\"dealData\").item.json.chatId }},\n  \"text\": \"Note '{{ $(\"dealData\").item.json.dealData.notes[0].title }}' created for Deal '{{ $(\"dealData\").item.json.dealData.name }}'!\",\n  \"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $(\"dealData\").item.json.chatId }},\n  \"text\": \"Note '{{ $(\"dealData\").item.json.dealData.notes[0].title }}' created for Deal *{{ $(\"dealData\").item.json.dealData.name }}*!\\n\\nView Deal: [{{ $(\"dealData\").item.json.docName }}]({{ $(\"dealData\").item.json.crmBaseUrl }}/app/crm-deal/{{ $(\"dealData\").item.json.docName }})\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
       "name": "Send Note Confirmation1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        1312,
+        1520,
         880
       ],
       "id": "0298cc7e-f22b-4545-a7f6-3618a78740d1"
@@ -280,7 +280,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        448,
+        656,
         768
       ],
       "id": "f54c3be9-429e-4d46-abf9-66348e3a5d04",
@@ -330,10 +330,23 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        912,
+        1120,
         1104
       ],
       "id": "bc4be6ab-5398-47dd-920a-8375f34d5f55"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the input data object\nconst input = $input.item.json;\n\n// Create a deep copy of dealData so we don't modify the input\nconst cleanDealData = JSON.parse(JSON.stringify(input.dealData));\n\n// The CRITICAL FIX: Remove the 'name' field from the body \n// because it conflicts with the docName in the URL path.\ndelete cleanDealData.name;\n\n// The Frappe API expects the body to be the document object itself,\n// so return only the cleaned data.\nreturn [\n  { \n    json: cleanDealData \n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        1040
+      ],
+      "id": "b5d4a16d-58df-44e4-a3fb-0f328b2478e1",
+      "name": "Clean Deal Payload"
     }
   ],
   "pinData": {},
@@ -342,7 +355,7 @@
       "main": [
         [
           {
-            "node": "Update Deal",
+            "node": "Clean Deal Payload",
             "type": "main",
             "index": 0
           }
@@ -515,13 +528,24 @@
           }
         ]
       ]
+    },
+    "Clean Deal Payload": {
+      "main": [
+        [
+          {
+            "node": "Update Deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "7b72ecf9-7450-4c1b-bb16-362ee7399a13",
+  "versionId": "47312c6f-6bb1-4753-a1cb-74c6effd8114",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"

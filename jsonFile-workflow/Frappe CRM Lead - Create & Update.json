@@ -3,18 +3,33 @@
   "nodes": [
     {
       "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const leadData = $input.item.json.message.content;\nconst context = $('Parse Fields7').item.json.body;\n\n// Add the isUpdate and docName flags from the original webhook payload\nconst isUpdate = context.isUpdate || false;\nconst docName = context.docName || null;\n\n// Merge the parsed lead data with the original context, including the flags\nreturn { json: { ...context, leadData, isUpdate, docName } };"
+      },
+      "name": "Merge Lead Data & Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6960,
+        2016
+      ],
+      "id": "48785726-88c2-4c3f-bbf2-376fb0f282be"
+    },
+    {
+      "parameters": {
         "httpMethod": "POST",
         "path": "VOICE_LEAD_TRIGGER",
         "options": {}
       },
-      "name": "Webhook",
+      "name": "Webhook7",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        -9344,
-        1312
+        -8640,
+        2016
       ],
-      "id": "9a7aadba-5e9b-4e50-887a-1c14dd51dd74"
+      "id": "70be1eca-98e0-47b9-a237-5967e0b43150",
+      "webhookId": "c541ecaa-c642-498f-8a57-8d84c85b8ef9"
     },
     {
       "parameters": {
@@ -27,14 +42,14 @@
           ]
         }
       },
-      "name": "Is Update?",
+      "name": "Is Update?7",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        -9120,
-        1328
+        -8416,
+        2016
       ],
-      "id": "202c77d1-2ce3-4775-8723-35bb5db32109"
+      "id": "9db6d981-d0c9-40c7-89e5-394036acf0c1"
     },
     {
       "parameters": {
@@ -42,14 +57,14 @@
         "responseFormat": "file",
         "options": {}
       },
-      "name": "Download Audio",
+      "name": "Download Audio7",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        -8896,
-        1312
+        -8192,
+        2016
       ],
-      "id": "7133703d-8d59-4d6c-b362-e1c0d75a8559"
+      "id": "d997e885-e1de-4fa4-8d10-776b63494abc"
     },
     {
       "parameters": {
@@ -57,51 +72,56 @@
         "operation": "transcribe",
         "options": {}
       },
-      "name": "Transcribe Audio",
+      "name": "Transcribe Audio7",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        -8672,
-        1312
+        -7968,
+        2016
       ],
-      "id": "921869f3-a7c8-472d-8693-01d0a52f95c3"
+      "id": "40fe9c19-05ff-446b-8eab-d5a26c7e3366",
+      "credentials": {
+        "openAiApi": {
+          "id": "07RiFjrpWpiDUJB6",
+          "name": "OpenAi account"
+        }
+      }
     },
     {
       "parameters": {
-        "authentication": "headerAuth",
-        "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/method/frappe.client.get_list?doctype=CRM%20Lead&fields=%5B%22*%22%5D&limit_page_length=1",
+        "url": "={{ $('Webhook7').item.json.body.crmBaseUrl }}/api/method/frappe.client.get_list?doctype=CRM%20Lead&fields=%5B%22*%22%5D&limit_page_length=1",
         "options": {},
         "headerParametersUi": {
           "parameter": [
             {
               "name": "Authorization",
-              "value": "=token {{ $('Webhook').item.json.body.frappeApiKey }}:{{ $('Webhook').item.json.body.frappeApiSecret }}"
+              "value": "=token {{ $('Webhook7').item.json.body.frappeApiKey }}:{{ $('Webhook7').item.json.body.frappeApiSecret }}"
             }
           ]
         }
       },
-      "name": "Get Lead Fields",
+      "name": "Get Lead Fields7",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        -8448,
-        1312
+        -7744,
+        2016
       ],
-      "id": "0d62a22b-2868-4a94-b258-29230553755c"
+      "id": "9e69c1aa-54a1-4132-88f6-0b2901205b08"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const leads = $input.item.json.message;\n\nif (!leads || leads.length === 0) {\n  const safeFields = ['lead_name', 'first_name', 'last_name', 'company_name', 'email_id', 'mobile_no', 'status', 'source', 'territory'];\n  const fields = safeFields.map(key => ({ name: key, label: key }));\n\n  return { json: { fields, body: $('Webhook').item.json.body } };\n}\n\nconst firstLead = leads[0];\nconst fields = Object.keys(firstLead).map(key => ({ name: key, label: key }));\n\nreturn { json: { fields, body: $('Webhook').item.json.body } };"
+        "jsCode": "const leads = $input.item.json.message;\n\nif (!leads || leads.length === 0) {\n  const safeFields = ['lead_name', 'first_name', 'last_name', 'company_name', 'email_id', 'mobile_no', 'status', 'source', 'territory'];\n  const fields = safeFields.map(key => ({ name: key, label: key }));\n\n  return { json: { fields, body: $('Webhook7').item.json.body } };\n}\n\nconst firstLead = leads[0];\nconst fields = Object.keys(firstLead).map(key => ({ name: key, label: key }));\n\nreturn { json: { fields, body: $('Webhook7').item.json.body } };"
       },
-      "name": "Parse Fields",
+      "name": "Parse Fields7",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -8224,
-        1312
+        -7520,
+        2016
       ],
-      "id": "55c4d293-2708-4100-b611-667794af7d7b"
+      "id": "3d989d49-73f1-4aeb-9c04-8cdb68196059"
     },
     {
       "parameters": {
@@ -112,49 +132,41 @@
         "messages": {
           "values": [
             {
-              "content": "==You are a CRM data extractor. Extract ONLY the mentioned fields from the transcription.\n\nText: {{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}\n\n---\nCRITICAL EXTRACTION RULES:\n1.  **MANDATORY FIRST NAME:** You MUST extract the first name and place it into the top-level property named **\"first_name\"**.\n2.  **STRICTLY ENFORCE:** The \"first_name\" property is mandatory for Lead Creation/Update.\n---\n\nRULES:\n- Use ONLY the field names provided in ALLOWED FIELDS.\n- If the user mentions tasks to be done, extract them into a \"tasks\" array. Each task should have a \"title\" and an optional \"description\".\n- If the user mentions notes to be taken, extract them into a \"notes\" array. Each note should have a \"title\" and \"content\".\n- If no tasks/notes are mentioned, do not include their keys in the output.\n- Output a single JSON object. Lead fields should be top-level properties.\n- Output ONLY JSON."
+              "content": "==You are a CRM data extractor. Extract ONLY the mentioned fields from the transcription.\n\nText: {{ $('Transcribe Audio7').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields7').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}\n\n---\nCRITICAL EXTRACTION RULES:\n1.  **MANDATORY FIRST NAME:** You MUST extract the first name and place it into the top-level property named **\"first_name\"**.\n2.  **STRICTLY ENFORCE:** The \"first_name\" property is mandatory for Lead Creation/Update.\n---\n\nRULES:\n- Use ONLY the field names provided in ALLOWED FIELDS.\n- If the user mentions tasks to be done, extract them into a \"tasks\" array. Each task should have a \"title\" and an optional \"description\".\n- If the user mentions notes to be taken, extract them into a \"notes\" array. Each note should have a \"title\" and \"content\".\n- If no tasks/notes are mentioned, do not include their keys in the output.\n- Output a single JSON object. Lead fields should be top-level properties.\n- Output ONLY JSON."
             }
           ]
         },
         "jsonOutput": true,
         "options": {}
       },
-      "name": "Parse to JSON",
+      "name": "Parse to JSON7",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        -7936,
-        1312
+        -7296,
+        2016
       ],
-      "id": "52f6f380-60b7-4749-906d-472e35359a37"
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const leadData = $input.item.json.message.content;\nconst context = $('Parse Fields').item.json.body;\n\n// Add the isUpdate and docName flags from the original webhook payload\nconst isUpdate = context.isUpdate || false;\nconst docName = context.docName || null;\n\n// Merge the parsed lead data with the original context, including the flags\nreturn { json: { ...context, leadData, isUpdate, docName } };"
-      },
-      "name": "Merge Lead Data & Context",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -7664,
-        1312
-      ],
-      "id": "97e6819e-e8c1-4b13-a447-0624d7764952"
+      "id": "f371b50c-69f5-448b-b2e6-628fe9e69cbf",
+      "credentials": {
+        "openAiApi": {
+          "id": "07RiFjrpWpiDUJB6",
+          "name": "OpenAi account"
+        }
+      }
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const leadData = $json.leadData;\nconst chatId = $json.chatId;\n\nif (!leadData || !chatId) {\n  throw new Error('Missing leadData or chatId');\n}\n\nfunction formatValue(value) {\n  if (Array.isArray(value)) {\n    return value.map((item) => {\n      if (typeof item === 'object' && item !== null) {\n        return `\\n    - ${Object.entries(item).map(([k, v]) => `*${k}:* ${v}`).join(', ')}`;\n      }\n      return `\\n    - ${item}`;\n    }).join('');\n  }\n  return value;\n}\n\nconst fieldsList = Object.entries(leadData)\n  .map(([key, value]) => `• *${key.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ')}:* ${formatValue(value) || '—'}`)\n  .join('\\n');\n\nfunction uuidv4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nconst draftId = uuidv4();\nconst isUpdateText = $json.isUpdate ? `*\\n\\n[UPDATING LEAD: ${$json.docName}]*` : '';\n\nconst telegramPayload = {\n  chat_id: chatId,\n  text: `*Draft Lead*${isUpdateText}\\n\\n${fieldsList || 'No data'}\\n\\nConfirm?`,\n  parse_mode: 'Markdown',\n  reply_markup: {\n    inline_keyboard: [\n      [{ text: 'Confirm', callback_data: `confirm_lead_draft:${draftId}` }],\n      [{ text: 'Cancel', callback_data: 'cancel_draft' }]\n    ]\n  },\n  // Data to store and pass to the final confirmation webhook\n  draftId: draftId,\n  leadData: leadData,\n  isUpdate: $json.isUpdate || false,\n  docName: $json.docName || null, \n  crmBaseUrl: $json.crmBaseUrl,\n  frappeApiKey: $json.frappeApiKey,\n  frappeApiSecret: $json.frappeApiSecret,\n  chatId: $json.chatId\n};\n\nreturn { json: telegramPayload };"
       },
-      "name": "Format Telegram Message",
+      "name": "Format Telegram Message7",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7392,
-        1312
+        -6688,
+        2016
       ],
-      "id": "e8a946e6-953a-4a6c-941e-359f13c63198"
+      "id": "8a7186f6-fcee-4685-8e0c-e12bde5516c7"
     },
     {
       "parameters": {
@@ -233,11 +245,11 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -7120,
-        1312
+        -6416,
+        2016
       ],
-      "id": "ba563203-7f51-488b-ad9c-48b21e766c27",
-      "name": "StoreDraft Data"
+      "id": "a907353b-e9b5-43f0-a9cc-04ab3530a41e",
+      "name": "StoreDraft Data7"
     },
     {
       "parameters": {
@@ -247,11 +259,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -6896,
-        1312
+        -6192,
+        2016
       ],
-      "id": "763d5e7b-98ad-4fc1-871f-2eefdc6c12e0",
-      "name": "Build Telegram Payload"
+      "id": "b1537e86-60e4-4857-9079-a02851d7fb75",
+      "name": "Build Telegram Payload7"
     },
     {
       "parameters": {
@@ -275,71 +287,82 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -6624,
-        1312
+        -5920,
+        2016
       ],
-      "id": "e3de3a0f-673a-41a2-8ea7-495f3d2fd500",
-      "name": "HTTP Request"
+      "id": "0c709338-59c8-45b4-8a3d-4569c556d2a1",
+      "name": "HTTP Request7"
     }
   ],
   "pinData": {},
   "connections": {
-    "Webhook": {
+    "Merge Lead Data & Context": {
       "main": [
         [
           {
-            "node": "Download Audio",
+            "node": "Format Telegram Message7",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Download Audio": {
+    "Webhook7": {
       "main": [
         [
           {
-            "node": "Transcribe Audio",
+            "node": "Download Audio7",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Transcribe Audio": {
+    "Download Audio7": {
       "main": [
         [
           {
-            "node": "Get Lead Fields",
+            "node": "Transcribe Audio7",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Lead Fields": {
+    "Transcribe Audio7": {
       "main": [
         [
           {
-            "node": "Parse Fields",
+            "node": "Get Lead Fields7",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Parse Fields": {
+    "Get Lead Fields7": {
       "main": [
         [
           {
-            "node": "Parse to JSON",
+            "node": "Parse Fields7",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Parse to JSON": {
+    "Parse Fields7": {
+      "main": [
+        [
+          {
+            "node": "Parse to JSON7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse to JSON7": {
       "main": [
         [
           {
@@ -350,44 +373,33 @@
         ]
       ]
     },
-    "Merge Lead Data & Context": {
+    "Format Telegram Message7": {
       "main": [
         [
           {
-            "node": "Format Telegram Message",
+            "node": "StoreDraft Data7",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Format Telegram Message": {
+    "StoreDraft Data7": {
       "main": [
         [
           {
-            "node": "StoreDraft Data",
+            "node": "Build Telegram Payload7",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "StoreDraft Data": {
+    "Build Telegram Payload7": {
       "main": [
         [
           {
-            "node": "Build Telegram Payload",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Build Telegram Payload": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request",
+            "node": "HTTP Request7",
             "type": "main",
             "index": 0
           }
@@ -399,10 +411,11 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "9b9563e4-35cb-4fea-9b69-ececdd4c9cd9",
+  "versionId": "088be609-8863-4103-a142-58b57f5c562e",
   "meta": {
-    "templateCredsSetupCompleted": true
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"
   },
-  "id": "EkuXG53ornPSfxFJ_updated_draft",
+  "id": "PnMujQe8oGpP2UBU",
   "tags": []
 }

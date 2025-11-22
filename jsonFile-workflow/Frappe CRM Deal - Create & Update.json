@@ -69,7 +69,6 @@
     },
     {
       "parameters": {
-        "authentication": "headerAuth",
         "url": "={{ $('Webhook').item.json.body.crmBaseUrl }}/api/method/frappe.client.get_list?doctype=CRM%20Deal&fields=%5B%22*%22%5D",
         "options": {},
         "headerParametersUi": {
@@ -88,13 +87,7 @@
         -2272,
         1232
       ],
-      "id": "a3ed5e8b-997d-456a-a2e8-3047b4255139",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "usDoofPm00vuGNxF",
-          "name": "Header Auth account"
-        }
-      }
+      "id": "a3ed5e8b-997d-456a-a2e8-3047b4255139"
     },
     {
       "parameters": {
@@ -119,7 +112,7 @@
         "messages": {
           "values": [
             {
-              "content": "==You are a CRM data extractor. Extract ONLY the mentioned fields from the transcription.\n\nText: {{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}\n\n---\nCRITICAL EXTRACTION RULES:\n1.  **MANDATORY DEAL NAME:** You MUST extract the main subject/name of the deal (e.g., \"Yulian\") and place it into the top-level property named **\"name\"**.\n2.  **STRICTLY ENFORCE:** The \"name\" property is the official Deal Name/Subject and MUST be included in the output.\n---\n\nRULES:\n- Use ONLY the field names provided in ALLOWED FIELDS.\n- **WARNING:** The \"name\" field is reserved for the human-readable deal name (e.g., \"Yulian\"), NOT the system-generated document ID (e.g., \"CRM-DEAL-0001\").\n- If the user mentions tasks to be done, extract them into a \"tasks\" array. Each task should have a \"title\" and an optional \"description\".\n- If the user mentions notes to be taken, extract them into a \"notes\" array. Each note should have a \"title\" and \"content\".\n- If no tasks are mentioned, do not include the \"tasks\" key in the output.\n- If no notes are mentioned, do not include the \"notes\" key in the output.\n- Output a single JSON object. Deal fields should be top-level properties.\n- Output ONLY JSON.\n\nExamples (Note the \"name\" field contains the Deal Name):\n- Deal with both tasks and notes:\n  {\n    \"name\": \"ACME Corp Deal\",\n    \"deal_value\": 10000,\n    \"tasks\": [\n      { \"title\": \"Send proposal\", \"description\": \"Draft and send the proposal by Friday\" }\n    ],\n    \"notes\": [\n      { \"title\": \"Initial Meeting\", \"content\": \"Client is interested in product X and Y. They mentioned a budget around $10k.\" }\n    ]\n  }"
+              "content": "==You are a CRM data extractor. Extract ONLY the mentioned fields from the transcription.\n\nText: {{ $('Transcribe Audio').item.json.text }}\n\nALLOWED FIELDS: {{ $('Parse Fields').item.json.fields.map(f => f.name + ' (' + f.label + ')').join(', ') }}\n\n---\nCRITICAL EXTRACTION RULES:\n1.  **MANDATORY DEAL SUBJECT:** You MUST extract the main subject/name of the deal (e.g., \"Yulian Deal\") and place it into the top-level property named **\"name\"** or **\"deal_name\"** (use whichever is present in the ALLOWED FIELDS list).\n2.  **MANDATORY STATUS:** If a status is mentioned (e.g., 'qualification', 'proposal'), you MUST include it under the key **\"status\"**. Use one of the system-defined values.\n3.  **STRICTLY ENFORCE:** The output must contain the Deal Subject/Name.\n---\n\nRULES:\n- Use ONLY the field names provided in ALLOWED FIELDS (e.g., use 'status' not 'Status').\n- Ensure contact and organization details are correctly mapped (e.g., 'organization' for Organization Name).\n- If the user mentions tasks, extract them into a **\"tasks\"** array (each with \"title\" and optional \"description\").\n- If the user mentions notes, extract them into a **\"notes\"** array (each with \"title\" and \"content\").\n- If no tasks/notes are mentioned, do not include their respective keys in the output.\n- Output a single JSON object. Deal fields should be top-level properties.\n- Output ONLY JSON.\n\nExamples (Note the explicit use of the 'status' field):\n {\n   \"name\": \"ACME Corp Project\",\n   \"organization\": \"ACME Corp\",\n   \"status\": \"Proposal/Quotation\", \n   \"deal_value\": 10000,\n   \"tasks\": [\n     { \"title\": \"Review T&Cs\", \"description\": \"Check legal terms with Glenn.\" }\n   ]\n }"
             }
           ]
         },
@@ -398,7 +391,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "026d4dd7-af64-417d-8d6f-8f7b2ae6c340",
+  "versionId": "dc37a49d-5302-4599-a032-930ba951aa8c",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"
