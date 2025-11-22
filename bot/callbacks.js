@@ -124,8 +124,8 @@ function setupCallbacks() {
         }
     } 
     
-    // === Confirm Lead Draft ===
-    else if (action.startsWith("confirm_draft:")) {
+    // === Confirm Lead Draft (Updated) ===
+    else if (action.startsWith("confirm_lead_draft:")) { // Renamed from confirm_draft:
       const draftId = action.split(":")[1];
 
       const activeCrmAlias = crmManager.getActiveCrmAlias(chatId);
@@ -232,8 +232,12 @@ function setupCallbacks() {
           ? [leadDataObj.notes]
           : [];
 
+      // === ADDED LOGIC: DETERMINE IF IT'S AN UPDATE ===
+      const isUpdate = !!bot.session[chatId].selectedDocName;
+      const docName = bot.session[chatId].selectedDocName; // The CRM-LEAD-XXXX name
+
       try {
-        await bot.editMessageText("Creating lead...", {
+        await bot.editMessageText(`${isUpdate ? 'Updating' : 'Creating'} lead...`, { // Updated message
           chat_id: chatId,
           message_id: query.message.message_id,
         });
@@ -246,8 +250,12 @@ function setupCallbacks() {
           frappeApiKey,
           frappeApiSecret,
           leadData: leadDataObj,
-          // For future: add isUpdate/docName logic here if Lead Updates get the same confirmation flow
+          isUpdate: isUpdate, // ADDED
+          docName: docName,   // ADDED
         });
+
+        // Clear the selectedDocName after triggering the confirmation webhook
+        bot.session[chatId].selectedDocName = null; // ADDED
 
         await bot.editMessageText("Waiting for CRM...", {
           chat_id: chatId,
@@ -255,14 +263,14 @@ function setupCallbacks() {
         });
       } catch (err) {
         console.error("[ERROR]", err.response?.data || err.message);
-        await bot.editMessageText("Error creating lead.", {
+        await bot.editMessageText("Error creating/updating lead.", { // Updated message
           chat_id: chatId,
           message_id: query.message.message_id,
         });
       }
     } 
     
-    // === Confirm Deal Draft (Updated to handle Create/Update) ===
+    // === Confirm Deal Draft (Kept as is for reference) ===
     else if (action.startsWith("confirm_deal_draft:")) {
       const draftId = action.split(":")[1];
 
@@ -287,6 +295,7 @@ function setupCallbacks() {
           {
             chat_id: chatId,
             message_id: query.message.message_id,
+            parse_mode: "Markdown"
           }
         );
         return;
@@ -362,7 +371,7 @@ function setupCallbacks() {
           : [];
       // --- END: ADVANCED DATA PARSING ---
       
-      // === NEW LOGIC: DETERMINE IF IT'S AN UPDATE ===
+      // === EXISTING LOGIC: DETERMINE IF IT'S AN UPDATE ===
       const isUpdate = !!bot.session[chatId].selectedDocName;
       const docName = bot.session[chatId].selectedDocName; // The CRM-DEAL-XXXX name
 

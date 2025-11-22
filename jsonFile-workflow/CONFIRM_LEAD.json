@@ -1,5 +1,5 @@
 {
-  "name": "CONFIRM_LEAD",
+  "name": "CONFIRM_LEAD (Create & Update)",
   "nodes": [
     {
       "parameters": {
@@ -24,7 +24,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const leadDataItem = $('leadData').item.json;\nconst leadReferenceName = $('Create Lead1').item.json.body.data.name || '';\n\nconst tasks = (leadDataItem.leadData && leadDataItem.leadData.tasks) || [];\n\nconst firstTask = tasks.find(task => typeof task === 'object' && task !== null);\n\nreturn {\n  json: firstTask\n    ? {\n        title: firstTask.title || '', // <--- Fixes $json.title\n        description: firstTask.description || '',\n        due_date: firstTask.due_date || '',\n        \n        leadReferenceName: leadReferenceName,\n        chatId: leadDataItem.chatId || '', // <--- Fixes $json.chatId\n        crmBaseUrl: leadDataItem.crmBaseUrl || '', // <--- Fixes $json.crmBaseUrl\n        frappeApiKey: leadDataItem.frappeApiKey || '',\n        frappeApiSecret: leadDataItem.frappeApiSecret || '',\n        leadName: (leadDataItem.leadData.first_name || '') + ' ' + (leadDataItem.leadData.last_name || '') // <--- Fixes $json.leadName\n      }\n    : {}\n};"
+        "jsCode": "const leadDataItem = $('leadData').item.json;\n\n// Get the final Lead Name (either the new ID from Create Lead or the docName from Update)\nconst leadReferenceName = $('Lead Created?').item.json.body.data.name || leadDataItem.docName || '';\nconst tasks = (leadDataItem.leadData && leadDataItem.leadData.tasks) || [];\n\n// Use the human-readable name for the Telegram message\nconst extractedLeadName = (leadDataItem.leadData.first_name || '') + ' ' + (leadDataItem.leadData.last_name || ''); \n\nreturn {\n  items: tasks.map(task => ({\n    json: {\n        title: task.title || '',\n        description: task.description || '',\n        due_date: task.due_date || '2025-11-28', \n        \n        // Use the system ID for linking to the document\n        leadReferenceName: leadReferenceName,\n        chatId: leadDataItem.chatId || '',\n        crmBaseUrl: leadDataItem.crmBaseUrl || '',\n        frappeApiKey: leadDataItem.frappeApiKey || '',\n        frappeApiSecret: leadDataItem.frappeApiSecret || '',\n        \n        // Use the human-readable name for confirmation message\n        leadName: extractedLeadName \n      }\n  }))\n};"
       },
       "name": "Iterate Tasks1",
       "type": "n8n-nodes-base.code",
@@ -38,11 +38,13 @@
     {
       "parameters": {
         "requestMethod": "POST",
-        "url": "={{ $json.crmBaseUrl }}/api/resource/CRM%20Task",
+        "url": "={{ $json.items[0].json.crmBaseUrl }}/api/resource/CRM%20Task",
         "jsonParameters": true,
-        "options": {},
-        "bodyParametersJson": "={{\nJSON.stringify({\ntitle: $json.title,\ndescription: $json.description || '',\ndue_date: '2025-11-28', // Replace with a valid date string\nreference_doctype: 'CRM Lead',\nreference_name: $json.leadReferenceName\n})\n}}",
-        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $json.frappeApiKey + ':' + $json.frappeApiSecret }}\"\n}"
+        "options": {
+          "bodyContentType": "raw"
+        },
+        "bodyParametersJson": "={{ JSON.stringify({ title: $json.items[0].json.title, description: $json.items[0].json.description || '', due_date: $json.items[0].json.due_date || '2025-11-28', reference_doctype: 'CRM Lead', reference_name: $json.items[0].json.leadReferenceName }) }}",
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $json.items[0].json.frappeApiKey + ':' + $json.items[0].json.frappeApiSecret }}\"\n}"
       },
       "name": "Create Task1",
       "type": "n8n-nodes-base.httpRequest",
@@ -59,7 +61,7 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": {{ $(\"Iterate Tasks1\").item.json.chatId }},\n  \"text\": \"Task '{{ $(\"Iterate Tasks1\").item.json.title }}' created for '{{ $(\"Iterate Tasks1\").item.json.leadName }}'!\\nView all tasks: [Task List]({{ $(\"Iterate Tasks1\").item.json.crmBaseUrl + 'crm/tasks/view' }})\",\n  \"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $(\"leadData\").item.json.chatId }},\n  \"text\": \"Task '{{ $(\"Iterate Tasks1\").item.json.title }}' created for '{{ $(\"Iterate Tasks1\").item.json.leadName }}'!\\nView all tasks: [Task List]({{ $(\"Iterate Tasks1\").item.json.crmBaseUrl + 'crm/tasks/view' }})\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
       "name": "Send Task Confirmation1",
       "type": "n8n-nodes-base.httpRequest",
@@ -93,7 +95,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const leadDataItem = $('leadData').item.json;\n// Safely get the CRM lead name created by the previous step\nconst leadReferenceName = $('Create Lead1').item.json.body.data.name || '';\n\n// Safely access the notes array\nconst notes = (leadDataItem.leadData && leadDataItem.leadData.notes) || [];\n\n// Find the first valid note object\nconst firstNote = notes.find(note => typeof note === 'object' && note !== null);\n\n// Return a single item, or an empty object if no valid note was found\nreturn {\n  json: firstNote\n    ? {\n        // Explicitly map note properties (safely handling null/undefined)\n        title: firstNote.title || '',\n        content: firstNote.content || '',\n        \n        // Add necessary context data\n        leadReferenceName: leadReferenceName,\n        chatId: leadDataItem.chatId || '',\n        crmBaseUrl: leadDataItem.crmBaseUrl || '',\n        frappeApiKey: leadDataItem.frappeApiKey || '',\n        frappeApiSecret: leadDataItem.frappeApiSecret || '',\n        leadName: (leadDataItem.leadData.first_name || '') + ' ' + (leadDataItem.leadData.last_name || '')\n      }\n    : {}\n};"
+        "jsCode": "const leadDataItem = $('leadData').item.json;\n\n// Get the final Lead Name (either the new ID from Create Lead or the docName from Update)\nconst leadReferenceName = $('Lead Created?').item.json.body.data.name || leadDataItem.docName || '';\nconst notes = (leadDataItem.leadData && leadDataItem.leadData.notes) || [];\n\n// Use the human-readable name for the Telegram message\nconst extractedLeadName = (leadDataItem.leadData.first_name || '') + ' ' + (leadDataItem.leadData.last_name || ''); \n\nreturn {\n  items: notes.map(note => ({\n    json: {\n        title: note.title || '',\n        content: note.content || '',\n        \n        // Context data for the next step (Create Note)\n        leadReferenceName: leadReferenceName,\n        chatId: leadDataItem.chatId || '',\n        crmBaseUrl: leadDataItem.crmBaseUrl || '',\n        frappeApiKey: leadDataItem.frappeApiKey || '',\n        frappeApiSecret: leadDataItem.frappeApiSecret || '',\n        \n        // USE THE CORRECTLY EXTRACTED NAME\n        leadName: extractedLeadName\n      }\n  }))\n};"
       },
       "name": "Iterate Notes1",
       "type": "n8n-nodes-base.code",
@@ -107,11 +109,13 @@
     {
       "parameters": {
         "requestMethod": "POST",
-        "url": "={{ $json.crmBaseUrl }}/api/resource/FCRM%20Note",
+        "url": "={{ $json.items[0].json.crmBaseUrl }}/api/resource/FCRM%20Note",
         "jsonParameters": true,
-        "options": {},
-        "bodyParametersJson": "={{ {\ntitle: $json.title,\ncontent: $json.content || $json.description || '',\nreference_doctype: \"CRM Lead\",\nreference_name: $json.leadReferenceName\n} }}",
-        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $json.frappeApiKey + ':' + $json.frappeApiSecret }}\"\n}"
+        "options": {
+          "bodyContentType": "raw"
+        },
+        "bodyParametersJson": "={{ {\ntitle: $json.items[0].json.title,\ncontent: $json.items[0].json.content || '',\nreference_doctype: \"CRM Lead\",\nreference_name: $json.items[0].json.leadReferenceName\n} }}",
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $json.items[0].json.frappeApiKey + ':' + $json.items[0].json.frappeApiSecret }}\"\n}"
       },
       "name": "Create Note1",
       "type": "n8n-nodes-base.httpRequest",
@@ -128,7 +132,7 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={\n  \"chat_id\": {{ $(\"Iterate Notes1\").item.json.chatId }},\n  \"text\": \"Note '{{ $(\"Iterate Notes1\").item.json.title }}' created for '{{ $(\"Iterate Notes1\").item.json.leadName }}'!\\nView all notes: [note List]({{ $(\"Iterate Notes1\").item.json.crmBaseUrl + 'crm/notes/view' }})\",\n  \"parse_mode\": \"Markdown\"\n}"
+        "bodyParametersJson": "={\n  \"chat_id\": {{ $(\"leadData\").item.json.chatId }},\n  \"text\": \"Note '{{ $(\"Iterate Notes1\").item.json.title }}' created for '{{ $(\"Iterate Notes1\").item.json.leadName }}'!\\nView all notes: [Note List]({{ $(\"Iterate Notes1\").item.json.crmBaseUrl + 'crm/notes/view' }})\",\n  \"parse_mode\": \"Markdown\"\n}"
       },
       "name": "Send Note Confirmation1",
       "type": "n8n-nodes-base.httpRequest",
@@ -158,7 +162,7 @@
     {
       "parameters": {
         "dataType": "string",
-        "value1": "={{ ($json.leadData.first_name || '').trim() }}",
+        "value1": "={{ ($('leadData').item.json.leadData.first_name || '').trim() }}",
         "rules": {
           "rules": [
             {
@@ -188,7 +192,7 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={{\n  \"chat_id\": $json.chatId,\n  \"text\": \"Please provide your *First Name* to create the lead it is mandatory so Record again please!\",\n  \"parse_mode\": \"Markdown\"\n}}"
+        "bodyParametersJson": "={{\n  \"chat_id\": $json.chatId,\n  \"text\": \"Please provide your *First Name* to create/update the lead it is mandatory so Record again please!\",\n  \"parse_mode\": \"Markdown\"\n}}"
       },
       "name": "Prompt User1",
       "type": "n8n-nodes-base.httpRequest",
@@ -214,7 +218,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
-        3200,
+        3440,
         3584
       ],
       "id": "63577e28-89ca-431a-a7e3-a686f152a078",
@@ -228,7 +232,7 @@
         "url": "https://api.telegram.org/bot8453286778:AAFGJHgj7gO40706uyBBBlyWqvLmPBMUEko/sendMessage",
         "jsonParameters": true,
         "options": {},
-        "bodyParametersJson": "={{\nJSON.stringify({\nchat_id: $(\"Wait for Confirmation1\").item.json.body.chatId,\ntext: \"Lead created! View here: \" + $(\"Wait for Confirmation1\").item.json.body.crmBaseUrl + \"app/crm-lead/\" + ($(\"Create Lead1\").item.json.body.data.name || 'unknown'),\nparse_mode: \"Markdown\"\n})\n}}"
+        "bodyParametersJson": "={{\nJSON.stringify({\nchat_id: $(\"leadData\").item.json.chatId,\ntext: \"Lead successfully *\" + ($(\"leadData\").item.json.isUpdate ? 'updated' : 'created') + \"*! View here: \" + $(\"leadData\").item.json.crmBaseUrl + \"app/crm-lead/\" + ($(\"Lead Created?\").item.json.body.data.name || $(\"leadData\").item.json.docName || 'unknown'),\nparse_mode: \"Markdown\"\n})\n}}"
       },
       "name": "Send CRM Link1",
       "type": "n8n-nodes-base.httpRequest",
@@ -242,7 +246,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const leadData = { ...$json.body.leadData };\n\n// Remove tasks if empty, but ensure we keep the array if it has data\nif (Array.isArray(leadData.tasks) && leadData.tasks.length === 0) {\n  delete leadData.tasks;\n}\n\n// Remove notes if empty, but ensure we keep the array if it has data\nif (Array.isArray(leadData.notes) && leadData.notes.length === 0) {\n  delete leadData.notes;\n}\n\nreturn {\n  json: {\n    draftId: $json.body.draftId,\n    chatId: $json.body.chatId,\n    crmBaseUrl: $json.body.crmBaseUrl,\n    // Ensure we also pass API keys for later steps\n    frappeApiKey: $json.body.frappeApiKey,\n    frappeApiSecret: $json.body.frappeApiSecret,\n    leadData\n  }\n};\n"
+        "jsCode": "const leadData = { ...$json.body.leadData };\n\n// Remove tasks/notes if empty, but ensure we keep the array if it has data\nif (!leadData.tasks) leadData.tasks = [];\nif (!leadData.notes) leadData.notes = [];\n\nreturn {\n  json: {\n    draftId: $json.body.draftId,\n    chatId: $json.body.chatId,\n    crmBaseUrl: $json.body.crmBaseUrl,\n    frappeApiKey: $json.body.frappeApiKey,\n    frappeApiSecret: $json.body.frappeApiSecret,\n    leadData,\n    // ADDED: Pass through the new fields from the draft generator\n    isUpdate: $json.body.isUpdate || false,\n    docName: $json.body.docName || null\n  }\n};\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -268,10 +272,53 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        3440,
+        3648,
         3584
       ],
       "id": "20e2a234-726a-47c8-b5ec-120544e346b3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.isUpdate }}",
+              "value2": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "name": "Is Update?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        3200,
+        3584
+      ],
+      "id": "c7cd0e5b-f615-4083-bc39-3e5a08326f5b_new"
+    },
+    {
+      "parameters": {
+        "requestMethod": "PUT",
+        "url": "={{ $json.crmBaseUrl }}/api/resource/CRM%20Lead/{{ $json.docName }}",
+        "jsonParameters": true,
+        "options": {
+          "fullResponse": true
+        },
+        "bodyParametersJson": "={{ $json.leadData }}",
+        "headerParametersJson": "={\n  \"Authorization\": \"{{ 'token ' + $('Wait for Confirmation1').item.json.body.frappeApiKey + ':' + $('Wait for Confirmation1').item.json.body.frappeApiSecret }}\"\n}"
+      },
+      "name": "Update Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        3440,
+        3776
+      ],
+      "id": "20c6ab5a-eeb6-4a1d-9725-18682adbae29_new",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false
     }
   ],
   "pinData": {},
@@ -357,7 +404,7 @@
       "main": [
         [
           {
-            "node": "Create Lead1",
+            "node": "Is Update?",
             "type": "main",
             "index": 0
           }
@@ -413,6 +460,35 @@
           }
         ]
       ]
+    },
+    "Is Update?": {
+      "main": [
+        [
+          {
+            "node": "Update Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Lead1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead": {
+      "main": [
+        [
+          {
+            "node": "Lead Created?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -421,9 +497,8 @@
   },
   "versionId": "9b9563e4-35cb-4fea-9b69-ececdd4c9cd9",
   "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "6b4c3f07ffb2a9fbb4da3043f5991767bcfa9a87470082c7cd7bb38a6a0433a3"
+    "templateCredsSetupCompleted": true
   },
-  "id": "EkuXG53ornPSfxFJ",
+  "id": "EkuXG53ornPSfxFJ_updated_confirm",
   "tags": []
 }
