@@ -124,7 +124,7 @@ function setupCallbacks() {
         }
     } 
     
-    // === Confirm Lead Draft (Updated) ===
+    // === Confirm Lead Draft (Fixed to ensure isUpdate/docName are sent) ===
     else if (action.startsWith("confirm_lead_draft:")) { // Renamed from confirm_draft:
       const draftId = action.split(":")[1];
 
@@ -232,12 +232,12 @@ function setupCallbacks() {
           ? [leadDataObj.notes]
           : [];
 
-      // === ADDED LOGIC: DETERMINE IF IT'S AN UPDATE ===
+      // === LOGIC TO DETERMINE IF IT'S AN UPDATE (Based on session) ===
       const isUpdate = !!bot.session[chatId].selectedDocName;
       const docName = bot.session[chatId].selectedDocName; // The CRM-LEAD-XXXX name
 
       try {
-        await bot.editMessageText(`${isUpdate ? 'Updating' : 'Creating'} lead...`, { // Updated message
+        await bot.editMessageText(`${isUpdate ? 'Updating' : 'Creating'} lead...`, { 
           chat_id: chatId,
           message_id: query.message.message_id,
         });
@@ -250,12 +250,12 @@ function setupCallbacks() {
           frappeApiKey,
           frappeApiSecret,
           leadData: leadDataObj,
-          isUpdate: isUpdate, // ADDED
-          docName: docName,   // ADDED
+          isUpdate: isUpdate, // PASS THE FLAG TO N8N
+          docName: docName,   // PASS THE DOCUMENT ID TO N8N
         });
 
         // Clear the selectedDocName after triggering the confirmation webhook
-        bot.session[chatId].selectedDocName = null; // ADDED
+        bot.session[chatId].selectedDocName = null; // Clear session reference
 
         await bot.editMessageText("Waiting for CRM...", {
           chat_id: chatId,
@@ -263,14 +263,14 @@ function setupCallbacks() {
         });
       } catch (err) {
         console.error("[ERROR]", err.response?.data || err.message);
-        await bot.editMessageText("Error creating/updating lead.", { // Updated message
+        await bot.editMessageText("Error creating/updating lead.", { 
           chat_id: chatId,
           message_id: query.message.message_id,
         });
       }
     } 
     
-    // === Confirm Deal Draft (Kept as is for reference) ===
+    // === Confirm Deal Draft (Fixed to ensure isUpdate/docName are sent) ===
     else if (action.startsWith("confirm_deal_draft:")) {
       const draftId = action.split(":")[1];
 
@@ -371,7 +371,7 @@ function setupCallbacks() {
           : [];
       // --- END: ADVANCED DATA PARSING ---
       
-      // === EXISTING LOGIC: DETERMINE IF IT'S AN UPDATE ===
+      // === LOGIC TO DETERMINE IF IT'S AN UPDATE (Based on session) ===
       const isUpdate = !!bot.session[chatId].selectedDocName;
       const docName = bot.session[chatId].selectedDocName; // The CRM-DEAL-XXXX name
 
@@ -389,12 +389,12 @@ function setupCallbacks() {
           frappeApiKey,
           frappeApiSecret,
           dealData: dealDataObj,
-          isUpdate: isUpdate, 
-          docName: docName,   
+          isUpdate: isUpdate,  // PASS THE FLAG TO N8N (FIX)
+          docName: docName,    // PASS THE DOCUMENT ID TO N8N (FIX)
         });
 
         // Clear the selectedDocName after triggering the confirmation webhook
-        bot.session[chatId].selectedDocName = null; 
+        bot.session[chatId].selectedDocName = null; // Clear session reference (FIX)
 
         await bot.editMessageText("Waiting for CRM...", {
           chat_id: chatId,
